@@ -3,7 +3,6 @@ import { flushSync } from "react-dom";
 import { focusKeyboardInput, lockBodyScroll } from "./viewport";
 
 export { Sheet, type SheetProps } from "./Sheet";
-export { focusKeyboardInput, lockBodyScroll, useVisualViewportVars } from "./viewport";
 
 /*
  * Открытие шторки с автофокусом поля — с выезжающей клавиатурой. Порядок важен,
