@@ -1,4 +1,12 @@
+import type { Page } from "@playwright/test";
+
 import { expect, swipeDown, test } from "../../fixtures/index.ts";
+
+// Статус в карточке – выпадающий список. Его пункты выходят порталом за пределы шторки,
+// поэтому ищем их по странице, а не внутри карточки.
+const statusSelect = (page: Page) =>
+  page.getByRole("dialog", { name: "Изменить" }).getByRole("combobox", { name: "Статус" });
+const statusOption = (page: Page, name: string) => page.getByRole("option", { name });
 
 // Записи – подставные (apps/watchlist/src/sample): «Ночной экспресс» – фильм из каталога со
 // статусом «Хочу», «Северный свет» – сериал, «Домашнее видео 1994» – запись, заведённая руками.
@@ -13,11 +21,12 @@ test("карточка открывается по плитке, смена ст
 
     await expect(card.getByText("Ночной экспресс")).toBeVisible();
     await expect(card.getByText("Фильм · 2023")).toBeVisible();
-    await expect(card.getByRole("radio", { name: "Хочу" })).toBeChecked();
+    await expect(statusSelect(page)).toContainText("Хочу");
   });
 
   await test.step("после выбора статуса и «Готово» подзаголовок плитки обновлён", async () => {
-    await card.getByText("Смотрю", { exact: true }).click();
+    await statusSelect(page).click();
+    await statusOption(page, "Смотрю").click();
     await card.getByRole("button", { name: "Готово" }).click();
 
     await expect(card).toBeHidden();
@@ -32,13 +41,16 @@ test("«Жду сезон» предлагается сериалу и не пр
   const card = page.getByRole("dialog", { name: "Изменить" });
 
   await page.getByRole("button", { name: /Северный свет/ }).click();
-  await expect(card.getByRole("radio", { name: "Жду сезон" })).toBeAttached();
+  await statusSelect(page).click();
+  await expect(statusOption(page, "Жду сезон")).toBeVisible();
+  await page.keyboard.press("Escape");
   await card.getByRole("button", { name: "Готово" }).click();
   await expect(card).toBeHidden();
 
   await page.getByRole("button", { name: /Ночной экспресс/ }).click();
-  await expect(card.getByRole("radio", { name: "Смотрю" })).toBeAttached();
-  await expect(card.getByRole("radio", { name: "Жду сезон" })).toHaveCount(0);
+  await statusSelect(page).click();
+  await expect(statusOption(page, "Смотрю")).toBeVisible();
+  await expect(statusOption(page, "Жду сезон")).toHaveCount(0);
 });
 
 test("у записи без каталога в карточке правятся название и тип", async ({ page }) => {
@@ -50,7 +62,9 @@ test("у записи без каталога в карточке правятс
   await test.step("тип уходит сразу, по клику", async () => {
     await card.getByText("Сериал", { exact: true }).click();
 
-    await expect(card.getByRole("radio", { name: "Жду сезон" })).toBeAttached();
+    await statusSelect(page).click();
+    await expect(statusOption(page, "Жду сезон")).toBeVisible();
+    await page.keyboard.press("Escape");
   });
 
   await test.step("«Готово» сразу после правки названия не теряет его", async () => {
@@ -157,4 +171,68 @@ test("свайп вниз закрывает карточку и досылае�
   await expect(
     page.getByRole("main").getByRole("button", { name: /Правка перед свайпом/ }),
   ).toBeVisible();
+});
+
+// «Тихая гавань» – сериал из каталога со статусом «Жду сезон».
+test("у сериала со статусом «Жду сезон» он выбран в списке статусов", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: /Тихая гавань/ }).click();
+
+  await expect(statusSelect(page)).toContainText("Жду сезон");
+});
+
+// Шторка слушает Escape на window, меню – на документе. Escape при открытом списке статусов
+// должен закрыть только список, а следующий Escape – саму карточку.
+test("Escape закрывает сначала список статусов, потом карточку", async ({ page }) => {
+  await page.goto("/");
+  const card = page.getByRole("dialog", { name: "Изменить" });
+  await page.getByRole("button", { name: /Ночной экспресс/ }).click();
+  await statusSelect(page).click();
+  await expect(statusOption(page, "Смотрю")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+
+  await expect(statusOption(page, "Смотрю")).toHaveCount(0);
+  await expect(card).toBeVisible();
+
+  await page.keyboard.press("Escape");
+
+  await expect(card).toBeHidden();
+});
+
+// Невидимая подложка списка (Base UI) должна лежать над подложкой шторки: иначе тап мимо списка
+// доходил бы до шторки и закрывал её вместе со списком. Точка (196, 40) – затемнённая подложка
+// над шторкой на экране 393 px.
+test("тап мимо списка статусов закрывает только список", async ({ page }) => {
+  await page.goto("/");
+  const card = page.getByRole("dialog", { name: "Изменить" });
+  await page.getByRole("button", { name: /Ночной экспресс/ }).click();
+  await expect(card).toBeVisible();
+
+  // Тап с паузой между касанием и отпусканием, как у пальца: так подложка шторки получает
+  // событие. Без паузы (и у `page.touchscreen.tap`) тест проходил бы даже без исправления.
+  const session = await page.context().newCDPSession(page);
+  const fingerTap = async (x: number, y: number) => {
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    await page.waitForTimeout(60);
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  };
+  try {
+    // Пробное наведение ждёт, пока шторка доедет вверх: по её положению в пути тап промахнулся бы.
+    await statusSelect(page).hover({ trial: true });
+    const trigger = await statusSelect(page).boundingBox();
+    if (!trigger) throw new Error("У списка статусов нет размеров – он не на экране");
+    await fingerTap(trigger.x + trigger.width / 2, trigger.y + trigger.height / 2);
+    await expect(statusOption(page, "Смотрю")).toBeVisible();
+
+    await fingerTap(196, 40);
+  } finally {
+    await session.detach();
+  }
+
+  await expect(statusOption(page, "Смотрю")).toHaveCount(0);
+  await page.waitForTimeout(700);
+  await expect(card).toBeVisible();
+  await expect(statusSelect(page)).toBeVisible();
 });

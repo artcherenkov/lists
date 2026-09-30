@@ -5,6 +5,13 @@ import { Chips } from "@lists/ui/components/chips";
 import { Button } from "@lists/ui/components/ui/button";
 import { Input } from "@lists/ui/components/ui/input";
 import { Label } from "@lists/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@lists/ui/components/ui/select";
 import { Trash2Icon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -56,7 +63,7 @@ export function ItemSheet({
   const { open, finishWith } = useClosingSheet();
   const titleId = useId();
   const kindName = useId();
-  const statusName = useId();
+  const statusId = useId();
 
   // Название набирают по буквам, а наружу оно уходит после паузы: родитель не должен
   // получать каждую букву. `sentTitle` – то, что родитель уже знает.
@@ -178,13 +185,34 @@ export function ItemSheet({
 
         {statusOptions.length > 0 && (
           <div className="grid gap-2">
-            <Label>Статус</Label>
-            <Chips
-              name={statusName}
+            <Label htmlFor={statusId}>Статус</Label>
+            {/* Размеры триггера – как у поля «Название» (`inputClass`): `data-[size=default]:h-11`,
+                потому что штатную высоту `h-8` задаёт такой же селектор. */}
+            <Select
+              items={statusOptions}
               value={item.status}
-              options={statusOptions}
-              onChange={(status) => onChange({ status })}
-            />
+              onValueChange={(status) => {
+                if (status !== null) onChange({ status });
+              }}
+            >
+              <SelectTrigger
+                id={statusId}
+                className="w-full px-2.5 text-base data-[size=default]:h-11"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                {statusOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="min-h-10 text-base"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

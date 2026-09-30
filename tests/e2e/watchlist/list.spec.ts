@@ -38,7 +38,8 @@ test("пустая вкладка показывает «Пока пусто»",
   await test.step("единственная запись «Смотрю» переходит в «Хочу»", async () => {
     await page.getByRole("button", { name: "Северный свет" }).click();
     const card = page.getByRole("dialog", { name: "Изменить" });
-    await card.getByText("Хочу", { exact: true }).click();
+    await card.getByRole("combobox", { name: "Статус" }).click();
+    await page.getByRole("option", { name: "Хочу" }).click();
     await card.getByRole("button", { name: "Готово" }).click();
     await expect(card).toBeHidden();
   });
