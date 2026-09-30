@@ -22,8 +22,12 @@ export function PosterCard({
   onOpen: (id: string) => void;
 }) {
   return (
-    <button type="button" onClick={() => onOpen(item.id)} className="w-full text-left outline-none">
-      <div className="relative aspect-2/3 overflow-hidden rounded-lg border bg-muted">
+    <button
+      type="button"
+      onClick={() => onOpen(item.id)}
+      className="group w-full text-left outline-none"
+    >
+      <div className="relative aspect-2/3 overflow-hidden rounded-lg border bg-muted group-focus-visible:border-ring group-focus-visible:ring-3 group-focus-visible:ring-ring/50">
         {item.posterUrl ? (
           <img src={item.posterUrl} alt="" loading="lazy" className="size-full object-cover" />
         ) : (
@@ -34,6 +38,7 @@ export function PosterCard({
         {/* Песочные часы: запись ждёт продолжения. */}
         {item.waitingLabel && (
           <span
+            role="img"
             aria-label={item.waitingLabel}
             className="absolute top-1.5 left-1.5 rounded-md bg-black/70 p-1 text-white"
           >
@@ -42,6 +47,7 @@ export function PosterCard({
         )}
         {item.badge && (
           <span className="absolute top-1.5 right-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+            <span className="sr-only">Оценка: </span>
             {item.badge}
           </span>
         )}

@@ -29,8 +29,11 @@ test("список показывает подставные записи, вк�
     await expect(tiles).toHaveCount(8);
     const watchedMovie = tiles.filter({ hasText: "Кольцо холмов" });
     await expect(watchedMovie).toContainText("Фильм · 2019 · Посмотрел");
-    await expect(watchedMovie.getByText("8", { exact: true })).toBeVisible();
-    await expect(tiles.filter({ hasText: "Тихая гавань" }).getByLabel("Жду сезон")).toBeVisible();
+    await expect(watchedMovie.getByText("Оценка: 8", { exact: true })).toBeVisible();
+    await expect(watchedMovie.getByRole("button")).toHaveAccessibleName(/Оценка: 8/);
+    await expect(
+      tiles.filter({ hasText: "Тихая гавань" }).getByRole("img", { name: "Жду сезон" }),
+    ).toBeVisible();
   });
 
   await test.step("вкладка «Хочу» оставляет только записи со статусом «Хочу»", async () => {
