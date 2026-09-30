@@ -236,3 +236,23 @@ test("тап мимо списка статусов закрывает толь�
   await expect(card).toBeVisible();
   await expect(statusSelect(page)).toBeVisible();
 });
+
+// Пункты списка рендерятся порталом, а события React всплывают через порталы: без проверки
+// источника жест, начатый на пункте, попадал бы в обработчики панели и тянул шторку вниз.
+test("свайп вниз по пункту списка статусов не тянет и не закрывает карточку", async ({ page }) => {
+  await page.goto("/");
+  const card = page.getByRole("dialog", { name: "Изменить" });
+  const panel = card.locator(":scope > div").last();
+  await page.getByRole("button", { name: /Ночной экспресс/ }).click();
+  await statusSelect(page).hover({ trial: true });
+  await statusSelect(page).click();
+  await expect(statusOption(page, "Смотрю")).toBeVisible();
+  const topBefore = (await panel.boundingBox())?.y;
+
+  await swipeDown(page, statusOption(page, "Смотрю"), 450);
+  // Шторке, если бы она поехала, нужно время, чтобы доехать вниз.
+  await page.waitForTimeout(700);
+
+  await expect(card).toBeVisible();
+  expect((await panel.boundingBox())?.y).toBe(topBefore);
+});

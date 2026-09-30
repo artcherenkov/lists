@@ -371,7 +371,10 @@ export function Sheet({
     g.lastY = e.clientY;
     g.lastT = e.timeStamp;
     g.active = false;
-    g.rejected = false;
+    // события React всплывают через порталы: касание внутри портала (например, меню Select,
+    // вынесенного в body) приходит сюда, хотя в DOM лежит вне панели. Такой жест шторке не принадлежит
+    g.rejected = !panelRef.current?.contains(e.target as Node);
+    if (g.rejected) return;
     // жест с язычка или заголовка соревнуется не со скроллом, а только с
     // самой шторкой — правило «scrollTop = 0» для него не действует (vaul
     // так же смотрит на скроллируемых предков точки касания)
