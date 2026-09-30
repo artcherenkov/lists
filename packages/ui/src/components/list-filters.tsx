@@ -3,6 +3,7 @@ import type { ChoiceOption } from "./segmented-control";
 import { SlidersHorizontalIcon } from "lucide-react";
 import { useId } from "react";
 
+import { formatRatingRange } from "../lib/rating-range";
 import { SegmentedControl } from "./segmented-control";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "./ui/popover";
@@ -39,7 +40,6 @@ export function ListFilters({
 }) {
   const kindName = useId();
   const ratingLabelId = useId();
-  const [min, max] = value.rating;
 
   return (
     <Popover>
@@ -60,34 +60,34 @@ export function ListFilters({
           options={kindFilterOptions}
           onChange={(kind) => onChange({ ...value, kind })}
         />
-        <div role="group" aria-labelledby={ratingLabelId} className="flex flex-col gap-2">
-          <div id={ratingLabelId} className="text-sm leading-none font-medium">
-            Моя оценка
-          </div>
-          <div>
-            <Slider
-              min={ratingBounds[0]}
-              max={ratingBounds[1]}
-              step={1}
-              minStepsBetweenValues={0}
-              value={value.rating}
-              onValueChange={(rating) => {
-                // Тип слайдера допускает и одно число, но ползунков у нас два – всегда пара.
-                if (typeof rating === "number") return;
-                const [newMin, newMax] = rating;
-                if (newMin === undefined || newMax === undefined) return;
-                onChange({ ...value, rating: [newMin, newMax] });
-              }}
-              className="py-2"
-            />
+        <div role="group" aria-labelledby={ratingLabelId} className="flex flex-col gap-2.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <div id={ratingLabelId} className="text-base leading-none font-medium">
+              Моя оценка
+            </div>
+            {/* Ползунки сами сообщают значения скринридеру, строка только для глаз. */}
             <div
-              className="mt-1 flex justify-between text-xs leading-4 text-muted-foreground tabular-nums"
+              className="text-2xl leading-8 font-bold tracking-[-0.01em] tabular-nums"
               aria-hidden="true"
             >
-              <span>{min}</span>
-              <span>{max}</span>
+              {formatRatingRange(value.rating)}
             </div>
           </div>
+          <Slider
+            min={ratingBounds[0]}
+            max={ratingBounds[1]}
+            step={1}
+            minStepsBetweenValues={0}
+            value={value.rating}
+            onValueChange={(rating) => {
+              // Тип слайдера допускает и одно число, но ползунков у нас два – всегда пара.
+              if (typeof rating === "number") return;
+              const [newMin, newMax] = rating;
+              if (newMin === undefined || newMax === undefined) return;
+              onChange({ ...value, rating: [newMin, newMax] });
+            }}
+            className="py-2"
+          />
         </div>
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <span className="text-sm text-muted-foreground" role="status">

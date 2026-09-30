@@ -47,6 +47,16 @@ export const OpenWithOneActiveFilter: Story = {
   play: openFilters,
 };
 
+export const OpenWithNarrowedRating: Story = {
+  args: { initialValue: { kind: "all", rating: [6, 9] }, resultCount: 4 },
+  play: openFilters,
+};
+
+export const OpenWithSingleRating: Story = {
+  args: { initialValue: { kind: "all", rating: [7, 7] }, resultCount: 1 },
+  play: openFilters,
+};
+
 export const OpenCounting: Story = {
   args: { resultCount: undefined },
   play: openFilters,

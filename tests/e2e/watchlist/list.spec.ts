@@ -70,3 +70,36 @@ test("смена типа в фильтрах видна на кнопке, «С
   await filters.getByRole("button", { name: "Сбросить" }).click();
   await expect(page.getByRole("button", { name: "Фильтры", exact: true })).toBeVisible();
 });
+
+test("сдвиг ползунков оценки меняет диапазон в заголовке группы", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Фильтры" }).click();
+  const filters = page.getByRole("dialog", { name: "Фильтры списка" });
+  const rating = filters.getByRole("group", { name: "Моя оценка" });
+  const [minThumb, maxThumb] = await rating.getByRole("slider").all();
+
+  await test.step("вначале виден весь диапазон", async () => {
+    await expect(rating.getByText("1–10", { exact: true })).toBeVisible();
+  });
+
+  await test.step("сдвиг обоих ползунков сужает диапазон", async () => {
+    await minThumb!.focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await maxThumb!.focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(rating.getByText("3–9", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Фильтры · 1" })).toBeVisible();
+  });
+
+  await test.step("когда края совпали, вместо диапазона одно число", async () => {
+    await minThumb!.focus();
+    await page.keyboard.press("Shift+ArrowRight");
+    await expect(rating.getByText("9", { exact: true })).toBeVisible();
+  });
+
+  await test.step("«Сбросить» возвращает весь диапазон", async () => {
+    await filters.getByRole("button", { name: "Сбросить" }).click();
+    await expect(rating.getByText("1–10", { exact: true })).toBeVisible();
+  });
+});
