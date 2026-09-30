@@ -1,6 +1,5 @@
 import type { StorybookConfig } from "@storybook/react-vite";
 
-import tailwindcss from "@tailwindcss/vite";
 import { mergeConfig } from "vite";
 
 const config: StorybookConfig = {
@@ -16,10 +15,9 @@ const config: StorybookConfig = {
   },
   // Без чек-листа «Get started» в боковой панели.
   features: { sidebarOnboardingChecklist: false },
+  // Tailwind, React и алиасы Storybook берёт из vite.config.ts приложения.
   viteFinal: (viteConfig) =>
     mergeConfig(viteConfig, {
-      // У пакета нет своего vite.config: Tailwind подключаем здесь, как приложение в своём.
-      plugins: [tailwindcss()],
       build: {
         rolldownOptions: {
           // @base-ui помечает файлы директивой "use client" для серверных компонентов React.

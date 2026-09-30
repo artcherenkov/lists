@@ -8,5 +8,5 @@
     // Компоненты пакета импортируют друг друга по имени пакета – так их пишет CLI shadcn
     "paths": { "@lists/ui/*": ["./src/*"] }
   },
-  "include": ["src", ".storybook"]
+  "include": ["src"]
 }
