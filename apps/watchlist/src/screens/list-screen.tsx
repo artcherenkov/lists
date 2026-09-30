@@ -52,7 +52,7 @@ export function ListScreen({
       <div className="mb-3 flex justify-end">{filtersSlot}</div>
 
       <Tabs value={tab} onValueChange={(value) => onTabChange(String(value))} className="mb-4">
-        {/* min-h, а не h: собственный h-8 у списка перебивает высоту по специфичности. */}
+        {/* min-h, а не h: собственный h-9 у списка перебивает высоту по специфичности. */}
         <TabsList className="min-h-12 w-full rounded-full">
           {tabs.map(({ value, label }) => (
             // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».

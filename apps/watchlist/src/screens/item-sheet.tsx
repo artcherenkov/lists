@@ -186,7 +186,7 @@ export function ItemSheet({
           <div className="grid gap-2">
             <Label htmlFor={statusId}>Статус</Label>
             {/* Размеры триггера – как у поля «Название» (`inputClass`): `data-[size=default]:h-11`,
-                потому что штатную высоту `h-8` задаёт такой же селектор. */}
+                потому что штатную высоту `h-9` задаёт такой же селектор. */}
             <Select
               items={statusOptions}
               value={item.status}
@@ -194,10 +194,7 @@ export function ItemSheet({
                 if (status !== null) onChange({ status });
               }}
             >
-              <SelectTrigger
-                id={statusId}
-                className="w-full px-2.5 text-base data-[size=default]:h-11"
-              >
+              <SelectTrigger id={statusId} className="w-full text-base data-[size=default]:h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
