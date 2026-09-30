@@ -10,7 +10,7 @@
       "unknown"
     ]
   },
-  "overrides": [{ "files": ["**/*.md"], "options": { "proseWrap": "preserve" } }],
+  "overrides": [{ "files": ["**/*.md"], "options": { "proseWrap": "never" } }],
   "ignorePatterns": [
     "dist/**",
     "coverage/**",

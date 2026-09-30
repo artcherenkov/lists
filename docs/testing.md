@@ -41,8 +41,8 @@
 
 ## Образцы
 
-| Кирпичики                  | Файл                                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| unit, без кирпичиков       | `tests/fixtures/__tests__/address.test.ts` – правило «свой или чужой адрес»                 |
-| `page`, `ownAddressesOnly` | `tests/e2e/app/launch.spec.ts` – приложение открывается, чужих запросов нет                 |
-| `page`, `clock`            | `tests/e2e/watchlist/add-sheet.spec.ts` – поиск стартует через 300 мс после последней буквы |
+| Кирпичики | Файл |
+| --- | --- |
+| unit, без кирпичиков | `tests/fixtures/__tests__/address.test.ts` – правило «свой или чужой адрес» |
+| `page`, `ownAddressesOnly` | `tests/e2e/app/launch.spec.ts` – приложение открывается, чужих запросов нет |
+| `page`, `clock` | `tests/e2e/watchlist/add-sheet.spec.ts` – поиск стартует через 300 мс после последней буквы |
