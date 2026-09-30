@@ -56,7 +56,13 @@ export function ListScreen({
         <TabsList className="min-h-12 w-full">
           {tabs.map(({ value, label }) => (
             // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».
-            <TabsTrigger key={value} value={value} className="flex-auto text-base">
+            // Радиус выбранной вкладки – радиус списка минус его отступ 3px (в shadcn у обоих
+            // rounded-2xl): так углы идут параллельно рамке, а не расходятся.
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="flex-auto rounded-[calc(var(--radius-2xl)-3px)] text-base"
+            >
               {label}
             </TabsTrigger>
           ))}
