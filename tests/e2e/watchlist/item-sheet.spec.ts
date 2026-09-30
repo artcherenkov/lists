@@ -204,7 +204,7 @@ test("Escape закрывает сначала список статусов, п
 // Невидимая подложка списка (Base UI) должна лежать над подложкой шторки: иначе тап мимо списка
 // доходил бы до шторки и закрывал её вместе со списком. Точка (196, 40) – затемнённая подложка
 // над шторкой на экране 393 px.
-test("тап мимо списка статусов закрывает только список", async ({ page }) => {
+test("тап мимо списка статусов закрывает только список", async ({ page, clock }) => {
   await page.goto("/");
   const card = page.getByRole("dialog", { name: "Изменить" });
   await page.getByRole("button", { name: /Ночной экспресс/ }).click();
@@ -212,18 +212,24 @@ test("тап мимо списка статусов закрывает толь�
 
   await fingerTap(page, await centerOf(statusSelect(page)));
   await expect(statusOption(page, "Смотрю")).toBeVisible();
+  await clock.freeze();
 
   await fingerTap(page, { x: 196, y: 40 });
 
+  // Список и шторка, если бы она закрывалась, гаснут по таймерам страницы: на закрытие шторки
+  // уходит 500 мс.
+  await clock.advance(600);
   await expect(statusOption(page, "Смотрю")).toHaveCount(0);
-  await page.waitForTimeout(700);
   await expect(card).toBeVisible();
   await expect(statusSelect(page)).toBeVisible();
 });
 
 // Пункты списка рендерятся порталом, а события React всплывают через порталы: без проверки
 // источника жест, начатый на пункте, попадал бы в обработчики панели и тянул шторку вниз.
-test("свайп вниз по пункту списка статусов не тянет и не закрывает карточку", async ({ page }) => {
+test("свайп вниз по пункту списка статусов не тянет и не закрывает карточку", async ({
+  page,
+  clock,
+}) => {
   await page.goto("/");
   const card = page.getByRole("dialog", { name: "Изменить" });
   const panel = card.locator(":scope > div").last();
@@ -231,11 +237,12 @@ test("свайп вниз по пункту списка статусов не �
   await statusSelect(page).hover({ trial: true });
   await statusSelect(page).click();
   await expect(statusOption(page, "Смотрю")).toBeVisible();
+  await clock.freeze();
   const topBefore = (await panel.boundingBox())?.y;
 
   await swipeDown(page, statusOption(page, "Смотрю"), 450);
-  // Шторке, если бы она поехала, нужно время, чтобы доехать вниз.
-  await page.waitForTimeout(700);
+  // Шторке, если бы она поехала, нужно время, чтобы закрыться.
+  await clock.advance(600);
 
   await expect(card).toBeVisible();
   expect((await panel.boundingBox())?.y).toBe(topBefore);
