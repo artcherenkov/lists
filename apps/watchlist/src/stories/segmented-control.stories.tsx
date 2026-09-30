@@ -20,7 +20,6 @@ const meta = {
   title: "Компоненты/SegmentedControl",
   component: SegmentedControl,
   args: {
-    name: "kind",
     label: "Тип",
     value: "all",
     options: KIND_FILTER_OPTIONS,
@@ -38,5 +37,5 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const TwoOptions: Story = {
-  args: { name: "kind-two", value: "series", options: KIND_OPTIONS },
+  args: { value: "series", options: KIND_OPTIONS },
 };

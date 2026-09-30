@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 /** Вариант выбора: значение для кода и подпись для человека. Так же описаны вкладки списка. */
 export interface ChoiceOption {
   value: string;
@@ -30,19 +32,19 @@ const legendClass = "mb-2 text-sm leading-none font-medium";
  * Для вариантов, которые не помещаются в строку, не подходит: нужен другой вид выбора.
  */
 export function SegmentedControl({
-  name,
   label,
   value,
   options,
   onChange,
 }: {
-  name: string;
   /** Подпись группы: видна над дорожкой и служит её именем. */
   label: string;
   value: string;
   options: readonly ChoiceOption[];
   onChange: (value: string) => void;
 }) {
+  const name = useId();
+
   return (
     <fieldset className="min-w-0">
       <legend className={legendClass}>{label}</legend>

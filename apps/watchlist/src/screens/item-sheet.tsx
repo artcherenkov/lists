@@ -63,7 +63,6 @@ export function ItemSheet({
 }) {
   const { open, finishWith } = useClosingSheet();
   const titleId = useId();
-  const kindName = useId();
   const statusId = useId();
 
   // Название набирают по буквам, а наружу оно уходит после паузы: родитель не должен
@@ -174,7 +173,6 @@ export function ItemSheet({
               />
             </div>
             <SegmentedControl
-              name={kindName}
               label="Тип"
               value={item.kind}
               options={kindOptions}

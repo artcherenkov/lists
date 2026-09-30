@@ -77,7 +77,6 @@ export function AddSheet<T extends SearchResultView>({
 
   const { open, close, finishWith } = useClosingSheet();
   const manualTitleId = useId();
-  const manualKindName = useId();
 
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState<SearchOutcome<T>>();
@@ -230,7 +229,6 @@ export function AddSheet<T extends SearchResultView>({
             />
           </div>
           <SegmentedControl
-            name={manualKindName}
             label="Тип"
             value={draft.kind}
             options={kindOptions}

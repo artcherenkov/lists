@@ -40,7 +40,6 @@ export function ListFilters({
   resultCount?: number;
   onReset: () => void;
 }) {
-  const kindName = useId();
   const ratingLabelId = useId();
 
   return (
@@ -70,7 +69,6 @@ export function ListFilters({
       >
         <PopoverTitle className="sr-only">Фильтры списка</PopoverTitle>
         <SegmentedControl
-          name={kindName}
           label="Тип"
           value={value.kind}
           options={kindFilterOptions}
