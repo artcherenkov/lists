@@ -1,4 +1,4 @@
-import type { ChipOption } from "@lists/ui/components/chips";
+import type { ChoiceOption } from "@lists/ui/components/segmented-control";
 import type { ReactNode } from "react";
 
 import { Button } from "@lists/ui/components/ui/button";
@@ -22,7 +22,7 @@ export function ListScreen({
   onOpenProfile,
 }: {
   title: string;
-  tabs: readonly ChipOption[];
+  tabs: readonly ChoiceOption[];
   tab: string;
   onTabChange: (tab: string) => void;
   /** Кнопка и окно фильтров: их собирает родитель, экран лишь отводит им место. */

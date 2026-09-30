@@ -1,8 +1,8 @@
-import type { ChipOption } from "@lists/ui/components/chips";
+import type { ChoiceOption } from "@lists/ui/components/segmented-control";
 import type { ReactNode } from "react";
 
 import { Sheet, openSheetWithAutofocus } from "@lists/sheet";
-import { Chips } from "@lists/ui/components/chips";
+import { SegmentedControl } from "@lists/ui/components/segmented-control";
 import { Button } from "@lists/ui/components/ui/button";
 import { Input } from "@lists/ui/components/ui/input";
 import { Label } from "@lists/ui/components/ui/label";
@@ -66,7 +66,7 @@ export function AddSheet<T extends SearchResultView>({
   search: (query: string, signal: AbortSignal) => Promise<readonly T[]>;
   searchPlaceholder: string;
   /** Первый вариант выбран по умолчанию в ручном вводе, поэтому список не бывает пустым. */
-  kindOptions: readonly [ChipOption, ...ChipOption[]];
+  kindOptions: readonly [ChoiceOption, ...ChoiceOption[]];
   /** Получает тот же объект, что вернул `search`. */
   onPick: (result: T) => void;
   onCreate: (draft: { title: string; kind: string }) => void;
@@ -229,15 +229,13 @@ export function AddSheet<T extends SearchResultView>({
               required
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Тип</Label>
-            <Chips
-              name={manualKindName}
-              value={draft.kind}
-              options={kindOptions}
-              onChange={(kind) => patch({ kind })}
-            />
-          </div>
+          <SegmentedControl
+            name={manualKindName}
+            label="Тип"
+            value={draft.kind}
+            options={kindOptions}
+            onChange={(kind) => patch({ kind })}
+          />
         </div>
       )}
     </Sheet>

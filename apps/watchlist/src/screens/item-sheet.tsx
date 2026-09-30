@@ -1,7 +1,7 @@
-import type { ChipOption } from "@lists/ui/components/chips";
+import type { ChoiceOption } from "@lists/ui/components/segmented-control";
 
 import { Sheet } from "@lists/sheet";
-import { Chips } from "@lists/ui/components/chips";
+import { SegmentedControl } from "@lists/ui/components/segmented-control";
 import { Button } from "@lists/ui/components/ui/button";
 import { Input } from "@lists/ui/components/ui/input";
 import { Label } from "@lists/ui/components/ui/label";
@@ -52,9 +52,9 @@ export function ItemSheet({
 }: {
   /** Должен оставаться валидным до `onClosed`: удалённая запись показывается, пока шторка едет вниз. */
   item: ItemSheetView;
-  kindOptions: readonly ChipOption[];
+  kindOptions: readonly ChoiceOption[];
   /** Зависят от типа, пересчитывает родитель. Пустой список прячет блок статуса. */
-  statusOptions: readonly ChipOption[];
+  statusOptions: readonly ChoiceOption[];
   onChange: (patch: ItemSheetPatch) => void;
   onDelete: () => void;
   /** Шторка доехала вниз: родитель её размонтирует. */
@@ -171,15 +171,13 @@ export function ItemSheet({
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label>Тип</Label>
-              <Chips
-                name={kindName}
-                value={item.kind}
-                options={kindOptions}
-                onChange={(kind) => onChange({ kind })}
-              />
-            </div>
+            <SegmentedControl
+              name={kindName}
+              label="Тип"
+              value={item.kind}
+              options={kindOptions}
+              onChange={(kind) => onChange({ kind })}
+            />
           </>
         )}
 

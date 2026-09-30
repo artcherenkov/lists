@@ -1,8 +1,9 @@
-import type { ChipOption } from "./chips";
+import type { ChoiceOption } from "./segmented-control";
 
 import { SlidersHorizontalIcon } from "lucide-react";
 import { useId } from "react";
 
+import { SegmentedControl } from "./segmented-control";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "./ui/popover";
 import { Slider } from "./ui/slider";
@@ -28,7 +29,7 @@ export function ListFilters({
   value: ListFiltersValue;
   onChange: (value: ListFiltersValue) => void;
   /** Первый вариант – «без фильтра» (например, «Все»). */
-  kindFilterOptions: readonly ChipOption[];
+  kindFilterOptions: readonly ChoiceOption[];
   ratingBounds: readonly [min: number, max: number];
   /** Число на кнопке «Фильтры · N». */
   activeCount: number;
@@ -52,30 +53,15 @@ export function ListFilters({
         className="w-80 max-w-[calc(100vw-2rem)] gap-5 p-4"
       >
         <PopoverTitle className="sr-only">Фильтры списка</PopoverTitle>
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-sm leading-5 font-medium">Тип</legend>
-          <div className="flex w-fit rounded-lg bg-muted p-0.5">
-            {kindFilterOptions.map((option) => (
-              // Фокус и выбор в тёмной теме — как у вкладок статуса под кнопкой.
-              <label
-                key={option.value}
-                className="flex min-h-8 cursor-pointer items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground has-[:checked]:bg-background has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-ring dark:has-[:checked]:bg-input/30"
-              >
-                <input
-                  type="radio"
-                  name={kindName}
-                  value={option.value}
-                  checked={value.kind === option.value}
-                  onChange={() => onChange({ ...value, kind: option.value })}
-                  className="sr-only"
-                />
-                {option.label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <SegmentedControl
+          name={kindName}
+          label="Тип"
+          value={value.kind}
+          options={kindFilterOptions}
+          onChange={(kind) => onChange({ ...value, kind })}
+        />
         <div role="group" aria-labelledby={ratingLabelId} className="flex flex-col gap-2">
-          <div id={ratingLabelId} className="text-sm leading-5 font-medium">
+          <div id={ratingLabelId} className="text-sm leading-none font-medium">
             Моя оценка
           </div>
           <div>

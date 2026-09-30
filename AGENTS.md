@@ -88,7 +88,7 @@
   `--filter <пакет>` для пакета): `package.json` и `pnpm-lock.yaml` руками не правим.
 - `pnpm dev` – Watchlist на `http://localhost:5175`.
 - `pnpm storybook` – Storybook на `http://localhost:6006`: токены и компоненты приложения
-  (список, плитка, фильтры, чипсы, карточка, добавление, шторка) в светлой и тёмной теме,
+  (список, плитка, фильтры, переключатель, карточка, добавление, шторка) в светлой и тёмной теме,
   ширина iPhone. Примитивы shadcn не показываем: для них сайт shadcn. Истории –
   `apps/watchlist/src/stories/*.stories.tsx`, конфиг – `apps/watchlist/.storybook`. `play` –
   только чтобы довести историю до состояния, без `expect`. Сборка – `pnpm build-storybook`, вывод в

@@ -2,8 +2,8 @@ import type { ItemSheetPatch, ItemSheetView } from "../screens/item-sheet.tsx";
 import type { PosterCardView } from "../screens/poster-card.tsx";
 import type { CatalogEntry } from "./sample-catalog.ts";
 import type { NewSampleItem, SampleItem, SampleKind, SampleStatus } from "./sample-items.ts";
-import type { ChipOption } from "@lists/ui/components/chips";
 import type { ListFiltersValue } from "@lists/ui/components/list-filters";
+import type { ChoiceOption } from "@lists/ui/components/segmented-control";
 
 import {
   isSampleKind,
@@ -19,21 +19,21 @@ import {
 export const ALL_TAB = "all";
 
 /** У «Жду сезон» своей вкладки нет: запись видна во вкладке «Все». */
-export const TAB_OPTIONS: readonly ChipOption[] = [
+export const TAB_OPTIONS: readonly ChoiceOption[] = [
   { value: ALL_TAB, label: "Все" },
   { value: "want", label: SAMPLE_STATUS_LABELS.want },
   { value: "watching", label: SAMPLE_STATUS_LABELS.watching },
   { value: "watched", label: SAMPLE_STATUS_LABELS.watched },
 ];
 
-export const KIND_OPTIONS: readonly [ChipOption, ...ChipOption[]] = [
+export const KIND_OPTIONS: readonly [ChoiceOption, ...ChoiceOption[]] = [
   { value: "movie", label: SAMPLE_KIND_LABELS.movie },
   { value: "series", label: SAMPLE_KIND_LABELS.series },
 ];
 
 export const ALL_KINDS = "all";
 
-export const KIND_FILTER_OPTIONS: readonly ChipOption[] = [
+export const KIND_FILTER_OPTIONS: readonly ChoiceOption[] = [
   { value: ALL_KINDS, label: "Все" },
   { value: "movie", label: "Фильмы" },
   { value: "series", label: "Сериалы" },
@@ -58,7 +58,7 @@ export function itemsOfTab(items: readonly SampleItem[], tab: string): readonly 
 }
 
 /** «Жду сезон» бывает только у сериала. */
-export function statusOptionsFor(kind: SampleKind): readonly ChipOption[] {
+export function statusOptionsFor(kind: SampleKind): readonly ChoiceOption[] {
   const statuses: SampleStatus[] =
     kind === "series"
       ? ["want", "watching", "watched", "waiting"]
