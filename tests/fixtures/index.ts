@@ -8,7 +8,7 @@ import { installPageClock } from "./clock.ts";
 import { startAppServer } from "./server.ts";
 
 export { expect };
-export { swipeDown } from "./swipe.ts";
+export { centerOf, fingerTap, swipeDown } from "./swipe.ts";
 
 // Кирпичики e2e. Тест перечисляет нужные в аргументах, Playwright создаёт только их.
 // На воркер: server. На тест: ownAddressesOnly, он включён всегда; clock – по запросу теста.

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, swipeDown, test } from "../../fixtures/index.ts";
+import { centerOf, expect, fingerTap, swipeDown, test } from "../../fixtures/index.ts";
 
 // Статус в карточке – выпадающий список. Его пункты выходят порталом за пределы шторки,
 // поэтому ищем их по странице, а не внутри карточки.
@@ -210,26 +210,10 @@ test("тап мимо списка статусов закрывает толь�
   await page.getByRole("button", { name: /Ночной экспресс/ }).click();
   await expect(card).toBeVisible();
 
-  // Тап с паузой между касанием и отпусканием, как у пальца: так подложка шторки получает
-  // событие. Без паузы (и у `page.touchscreen.tap`) тест проходил бы даже без исправления.
-  const session = await page.context().newCDPSession(page);
-  const fingerTap = async (x: number, y: number) => {
-    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
-    await page.waitForTimeout(60);
-    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  };
-  try {
-    // Пробное наведение ждёт, пока шторка доедет вверх: по её положению в пути тап промахнулся бы.
-    await statusSelect(page).hover({ trial: true });
-    const trigger = await statusSelect(page).boundingBox();
-    if (!trigger) throw new Error("У списка статусов нет размеров – он не на экране");
-    await fingerTap(trigger.x + trigger.width / 2, trigger.y + trigger.height / 2);
-    await expect(statusOption(page, "Смотрю")).toBeVisible();
+  await fingerTap(page, await centerOf(statusSelect(page)));
+  await expect(statusOption(page, "Смотрю")).toBeVisible();
 
-    await fingerTap(196, 40);
-  } finally {
-    await session.detach();
-  }
+  await fingerTap(page, { x: 196, y: 40 });
 
   await expect(statusOption(page, "Смотрю")).toHaveCount(0);
   await page.waitForTimeout(700);
