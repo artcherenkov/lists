@@ -8,10 +8,6 @@ import {
   RATING_BOUNDS,
 } from "../sample/views.ts";
 
-/**
- * Фильтры со своим состоянием: тип и ползунок работают, число на кнопке считается по значению,
- * «Сбросить» возвращает значение по умолчанию. Так их собирает и приложение.
- */
 export function StatefulListFilters({
   initialValue = DEFAULT_FILTERS,
   resultCount,

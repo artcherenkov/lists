@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import process from "node:process";
 
-// Единственный набор e2e. Приложение поднимает фикстура воркера в tests/fixtures,
-// поэтому webServer здесь нет, а --list ничего не запускает.
+// Приложение поднимает фикстура воркера из tests/fixtures, поэтому webServer здесь нет,
+// а --list ничего не запускает.
 export default defineConfig({
   testDir: "tests/e2e",
   outputDir: "test-results",
@@ -15,8 +15,8 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {
+    // Chromium, а не WebKit: снимки WebKit сверяются с автором отдельно.
     ...devices["Desktop Chrome"],
-    // Chromium с размерами и касаниями iPhone: WebKit-снимки сверяются с автором отдельно.
     viewport: { width: 393, height: 852 },
     isMobile: true,
     hasTouch: true,

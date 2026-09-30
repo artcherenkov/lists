@@ -8,8 +8,6 @@ import { ALL_TAB, itemsOfTab, TAB_OPTIONS, toPosterCardView } from "../sample/vi
 import { ListScreen } from "../screens/list-screen.tsx";
 import { StatefulListFilters } from "./stateful-list-filters.tsx";
 
-// Экран получает готовые вид-модели и обработчики. Здесь вкладкой управляет история,
-// а записи приходят из подставного списка; `undefined` – «ещё не загрузились».
 function ListScreenDemo({
   records,
   emptyText,
@@ -17,7 +15,6 @@ function ListScreenDemo({
 }: {
   records: readonly SampleItem[] | undefined;
   emptyText: string;
-  /** Фильтры в начале истории; без них – значение по умолчанию. */
   initialFilters?: ListFiltersValue;
 }) {
   const [tab, setTab] = useState(ALL_TAB);
@@ -53,7 +50,6 @@ type Story = StoryObj<typeof meta>;
 
 export const WithItems: Story = {};
 
-// Задан один фильтр: на значке фильтров в углу кружок с числом.
 export const WithActiveFilter: Story = {
   args: { initialFilters: { kind: "series", rating: [1, 10] } },
 };
@@ -62,7 +58,6 @@ export const Empty: Story = {
   args: { records: [] },
 };
 
-// Записи ещё грузятся: сетки и текста пустого списка нет.
 export const Loading: Story = {
   args: { records: undefined },
 };

@@ -2,7 +2,6 @@ import type { Locator, Page } from "@playwright/test";
 
 export type Point = { x: number; y: number };
 
-/** Точки пути вниз от `start` на `distance` пикселей: `steps` равных шагов, считая последний. */
 export function swipeDownPath(start: Point, distance: number, steps: number): Point[] {
   return Array.from({ length: steps }, (_, index) => ({
     x: start.x,
@@ -13,10 +12,7 @@ export function swipeDownPath(start: Point, distance: number, steps: number): Po
 type TouchType = "touchStart" | "touchMove" | "touchEnd";
 type SendTouch = (type: TouchType, point?: Point) => Promise<unknown>;
 
-/**
- * Настоящие касания через протокол браузера: Playwright сам умеет только тап без паузы.
- * Сессия открывается на время `gesture` и закрывается после него.
- */
+/** Настоящие касания через протокол браузера: Playwright сам умеет только тап без паузы. */
 async function withTouch(page: Page, gesture: (touch: SendTouch) => Promise<void>): Promise<void> {
   const session = await page.context().newCDPSession(page);
   try {
@@ -55,10 +51,8 @@ export async function fingerTap(page: Page, at: Point): Promise<void> {
 }
 
 /**
- * Свайп пальцем вниз от центра элемента. Шторка закрывается жестом, которого тап не заменит.
- *
- * Это быстрый бросок: касания идут подряд без пауз, и шторка закрывается по скорости, а не по
- * доле пройденного пути. Порог доли пути (`closeFraction`) помощник не проверяет.
+ * Быстрый бросок: касания идут подряд без пауз, и шторка закрывается по скорости, а не по доле
+ * пройденного пути. Порог доли пути (`closeFraction`) помощник не проверяет.
  */
 export async function swipeDown(page: Page, from: Locator, distance: number): Promise<void> {
   const start = await centerOf(from);

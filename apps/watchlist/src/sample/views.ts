@@ -12,9 +12,7 @@ import {
   SAMPLE_STATUS_LABELS,
 } from "./sample-items.ts";
 
-// Чистые функции между подставной записью и свойствами экранов. Экраны получают готовые
-// строки, поэтому всё, что зависит от модели, вычисляется здесь. После вехи 7 то же место
-// займёт слой данных.
+// Экраны получают готовые строки: всё, что зависит от модели записи, вычисляется здесь.
 
 export const ALL_TAB = "all";
 
@@ -43,7 +41,6 @@ export const RATING_BOUNDS = [1, 10] as const;
 
 export const DEFAULT_FILTERS: ListFiltersValue = { kind: ALL_KINDS, rating: RATING_BOUNDS };
 
-/** Число фильтров, отличающихся от значения по умолчанию. Записи они не отбирают. */
 export function countChangedFilters(filters: ListFiltersValue): number {
   const kindChanged = filters.kind !== DEFAULT_FILTERS.kind;
   const ratingChanged =
@@ -52,12 +49,10 @@ export function countChangedFilters(filters: ListFiltersValue): number {
   return Number(kindChanged) + Number(ratingChanged);
 }
 
-/** Вкладка отбирает записи равенством статуса, «Все» – все. */
 export function itemsOfTab(items: readonly SampleItem[], tab: string): readonly SampleItem[] {
   return items.filter((item) => !item.deleted && (tab === ALL_TAB || item.status === tab));
 }
 
-/** «Жду сезон» бывает только у сериала. */
 export function statusOptionsFor(kind: SampleKind): readonly ChoiceOption[] {
   const statuses: SampleStatus[] =
     kind === "series"
@@ -66,7 +61,7 @@ export function statusOptionsFor(kind: SampleKind): readonly ChoiceOption[] {
   return statuses.map((status) => ({ value: status, label: SAMPLE_STATUS_LABELS[status] }));
 }
 
-/** «Фильм · 2024 · Хочу». Год выхода сериала ни о чём не говорит – там важен сезон. */
+/** Год у сериала не показываем: там важен сезон. */
 function subtitleOf(item: SampleItem): string {
   return [
     SAMPLE_KIND_LABELS[item.kind],
@@ -77,7 +72,6 @@ function subtitleOf(item: SampleItem): string {
     .join(" · ");
 }
 
-/** «Сериал · 2021». */
 function detailsOf(item: SampleItem): string {
   return [SAMPLE_KIND_LABELS[item.kind], item.year].filter(Boolean).join(" · ");
 }
@@ -105,9 +99,8 @@ export function toItemSheetView(item: SampleItem): ItemSheetView {
 }
 
 /**
- * Применяет правку карточки. Значения приходят строками, поэтому неизвестный тип или статус
- * отбрасывается. Если после смены типа статус ему не подходит (фильм не может «ждать сезон»),
- * запись возвращается в «хочу».
+ * Значения приходят строками, поэтому неизвестный тип или статус отбрасывается. Если после
+ * смены типа статус не подходит (фильм не может «ждать сезон»), запись возвращается в «хочу».
  */
 export function applyItemPatch(item: SampleItem, patch: ItemSheetPatch): SampleItem {
   const kind = patch.kind !== undefined && isSampleKind(patch.kind) ? patch.kind : item.kind;
@@ -132,7 +125,7 @@ export function newItemFromCatalog(entry: CatalogEntry): NewSampleItem {
   };
 }
 
-/** Запись, заведённая руками: ни года, ни постера. Типы в форме берутся из `KIND_OPTIONS`. */
+/** Тип приходит строкой из формы, но берётся из `KIND_OPTIONS`: неизвестный – ошибка кода. */
 export function newItemFromDraft(draft: { title: string; kind: string }): NewSampleItem {
   if (!isSampleKind(draft.kind)) throw new Error(`Неизвестный тип записи: ${draft.kind}`);
   return { title: draft.title, kind: draft.kind, manual: true };

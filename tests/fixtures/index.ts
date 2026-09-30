@@ -10,13 +10,10 @@ import { startAppServer } from "./server.ts";
 export { expect };
 export { centerOf, fingerTap, swipeDown } from "./swipe.ts";
 
-// Кирпичики e2e. Тест перечисляет нужные в аргументах, Playwright создаёт только их.
-// На воркер: server. На тест: ownAddressesOnly, он включён всегда; clock – по запросу теста.
 type WorkerFixtures = { server: AppServer };
 type TestFixtures = { ownAddressesOnly: void; clock: PageClock };
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
-  // Собранное приложение на свободном порту; браузер открывает его по baseURL.
   server: [
     // oxlint-disable-next-line no-empty-pattern -- так Playwright объявляет фикстуру без зависимостей
     async ({}, use) => {
@@ -29,7 +26,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   baseURL: async ({ server }, use) => {
     await use(server.url);
   },
-  // Часы страницы: тест получает управление временем и обязан взять `clock` до `page.goto`.
   clock: async ({ page }, use) => {
     await use(await installPageClock(page));
   },

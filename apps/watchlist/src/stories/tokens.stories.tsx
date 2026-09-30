@@ -8,8 +8,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Переменные темы из src/styles.css. Образец берёт цвет из переменной, поэтому в тёмной
-// теме показывает тёмное значение.
+// Переменные темы из `packages/ui/src/styles.css`; список ведём руками.
 const colorGroups: { title: string; names: string[] }[] = [
   {
     title: "Основные",

@@ -12,7 +12,7 @@ export interface CatalogEntry extends SearchResultView {
   year: number;
 }
 
-// Подставной каталог для поиска: вместо TMDB, до которого на этой вехе ещё нет сервера.
+// Подставной каталог вместо TMDB: сервера для поиска ещё нет.
 const CATALOG: readonly CatalogEntry[] = [
   entry("catalog-1", "Звёздный ветер", "movie", 2022, dusk),
   entry("catalog-2", "Звёздная пыль севера", "series", 2020, aurora),
@@ -34,7 +34,7 @@ function entry(
 
 const SEARCH_DELAY_MS = 250;
 
-/** Ищет по названию в подставном каталоге. Отвечает с задержкой, как сеть, и уважает `signal`. */
+/** Имитирует сеть: отвечает с задержкой, при отмене отклоняется с `signal.reason`. */
 export async function searchSampleCatalog(
   query: string,
   signal: AbortSignal,

@@ -13,7 +13,6 @@ import { useClosingSheet } from "./use-closing-sheet.ts";
 
 const inputClass = "h-11 text-base";
 
-/** Какую долю шторки надо протянуть вниз, чтобы она закрылась. У Sheet по умолчанию 0.25. */
 const CLOSE_THRESHOLD = 0.4;
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -25,7 +24,7 @@ const MIN_QUERY_LENGTH = 2;
  */
 const SEARCH_FIELD_SELECTOR = "[data-add-sheet-search]";
 
-/** Чем закончился поиск по запросу `query` (уже без пробелов по краям). */
+/** `query` – уже без пробелов по краям. */
 interface SearchOutcome<T> {
   query: string;
   results: readonly T[];
@@ -36,7 +35,7 @@ interface SearchOutcome<T> {
 export interface SearchResultView {
   id: string;
   title: string;
-  /** Подпись под названием, например «Тип · 2024». */
+  /** Готовая строка, например «Тип · 2024». */
   details: string;
   posterUrl?: string;
 }
@@ -80,7 +79,6 @@ export function AddSheet<T extends SearchResultView>({
 
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState<SearchOutcome<T>>();
-  // Ручной ввод — редкий случай, поэтому он не отдельное поле, а пункт в выпадашке.
   const [manual, setManual] = useState(false);
   const [draft, setDraft] = useState({ title: "", kind: defaultKind.value });
 
@@ -95,7 +93,6 @@ export function AddSheet<T extends SearchResultView>({
 
   const changeQuery = (value: string) => {
     setQuery(value);
-    // Слишком короткий запрос ничего не ищет – прошлые результаты тоже не нужны.
     if (value.trim().length < MIN_QUERY_LENGTH) setOutcome(undefined);
   };
 
@@ -127,7 +124,7 @@ export function AddSheet<T extends SearchResultView>({
     changeQuery("");
   }
 
-  /** Назад к поиску: набранное руками название с собой не тащим — искать будут заново. */
+  /** Набранное руками название не переносим: поиск начнётся заново. */
   function backToSearch() {
     patch({ title: "" });
     setManual(false);
@@ -137,20 +134,13 @@ export function AddSheet<T extends SearchResultView>({
     <Sheet
       open={open}
       onClose={close}
-      // Родитель размонтирует нас только после анимации — иначе форма пропадала бы рывком,
-      // не доехав вниз.
       onClosed={onClosed}
-      // Заголовок только для скринридеров: и так видно, что за форма.
       title="Добавить"
       hideTitle
       closeFraction={CLOSE_THRESHOLD}
-      // Фон отъезжает вглубь, как в iOS. Обёртка помечена в index.html.
       scaleBackground
-      // Поиск и есть поле названия — прижат над скроллером и живёт вне <form>,
-      // чтобы Enter не отправлял запись. Фокус в него ставит `openAddSheet` при открытии.
       header={
         manual ? undefined : (
-          // Лупа кладётся на само поле, а не на колонку: иначе её уносит на середину шторки.
           <div className="relative pt-2 pb-2">
             <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -167,7 +157,6 @@ export function AddSheet<T extends SearchResultView>({
       }
       footer={
         manual ? (
-          // pb-3 сверх отступа шторки: кнопки прижимались к самому краю экрана.
           <div className="flex items-center gap-2 pt-4 pb-3">
             <Button
               type="button"
@@ -184,7 +173,6 @@ export function AddSheet<T extends SearchResultView>({
       }
     >
       {!manual && trimmedQuery.length >= MIN_QUERY_LENGTH && (
-        // Список во всю ширину шторки: рамка вокруг результатов только сжимала их.
         <ul className="-mx-4 divide-y">
           {results.map((result) => (
             <li key={result.id}>
@@ -211,7 +199,7 @@ export function AddSheet<T extends SearchResultView>({
       )}
 
       {manual && (
-        // pb-4 — иначе скроллер шторки срезает тень нижнего поля.
+        // pb-4: иначе скроллер шторки срезает тень фокуса нижнего поля.
         <div className="grid gap-4 pt-2 pb-4">
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
@@ -241,8 +229,8 @@ export function AddSheet<T extends SearchResultView>({
 }
 
 /**
- * Строка списка поиска: обложка (если есть), название и подпись. Высота – по обложке
- * (`h-16` и отступы `py-2` дают 5rem), поэтому строка без обложки не выпадает из ритма списка.
+ * `min-h-20` равен высоте обложки (`h-16` в `Poster`) с отступами `py-2`: строка без обложки
+ * не выпадает из ритма списка.
  */
 function ResultRow({
   title,

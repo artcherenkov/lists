@@ -20,18 +20,16 @@ import { useClosingSheet } from "./use-closing-sheet.ts";
 
 const inputClass = "h-11 text-base";
 
-/** Какую долю шторки надо протянуть вниз, чтобы она закрылась. У Sheet по умолчанию 0.25. */
 const CLOSE_THRESHOLD = 0.4;
 
-/** Сколько ждать после последней правки названия, прежде чем отдать его наружу. */
 const TITLE_DEBOUNCE_MS = 400;
 
 export interface ItemSheetView {
   title: string;
-  /** Подпись под названием, например «Тип · 2021». */
+  /** Готовая строка, например «Тип · 2021». */
   details: string;
   posterUrl?: string;
-  /** Запись заведена руками, а не выбрана из каталога: вместо блока с постером – поля названия и типа. */
+  /** Запись заведена руками, а не выбрана из каталога: название и тип можно править. */
   manual: boolean;
   kind: string;
   status: string;
@@ -39,10 +37,7 @@ export interface ItemSheetView {
 
 export type ItemSheetPatch = Partial<Pick<ItemSheetView, "title" | "kind" | "status">>;
 
-/**
- * Карточка записи: постер, статус, у записи, заведённой руками, – название и тип, удаление, «Готово».
- * Правка уходит наружу сразу, кнопки «Сохранить» нет. Монтируется на время показа.
- */
+/** Правка уходит наружу сразу, кнопки «Сохранить» нет. Монтируется на время показа. */
 export function ItemSheet({
   item,
   kindOptions,
@@ -107,23 +102,17 @@ export function ItemSheet({
     <Sheet
       open={open}
       onClose={closeWithTitle}
-      // Родитель размонтирует нас только после анимации — иначе форма пропадала бы рывком,
-      // не доехав вниз.
       onClosed={onClosed}
-      // Заголовок только для скринридеров: и так видно, что за форма.
       title="Изменить"
       hideTitle
       closeFraction={CLOSE_THRESHOLD}
-      // Фон отъезжает вглубь, как в iOS. Обёртка помечена в index.html.
       scaleBackground
       footer={
-        // pb-3 сверх отступа шторки: кнопки прижимались к самому краю экрана.
         <div className="flex items-center gap-2 pt-4 pb-3">
           <Button type="button" variant="ghost" className="h-11" onClick={deleteItem}>
             <Trash2Icon />
             Удалить
           </Button>
-          {/* Правка уходит сразу, поэтому кнопка только закрывает. */}
           <Button
             type="button"
             variant="outline"
@@ -135,11 +124,10 @@ export function ItemSheet({
         </div>
       }
     >
-      {/* pb-4 — иначе скроллер шторки срезает тень нижнего поля. */}
+      {/* pb-4: иначе скроллер шторки срезает тень фокуса нижнего поля. */}
       <div className="grid gap-4 pt-2 pb-4">
         {/* Выбранное из каталога показываем, а не переспрашиваем: заменить его нельзя,
-            это была бы другая запись. Рамка скруглена, как поля ниже; постер – меньше рамки,
-            но не до нуля, как дало бы строгое вложение при отступе 12 px. */}
+            это была бы другая запись. */}
         {!item.manual && (
           <div className="flex items-center gap-4 rounded-md border p-3">
             {item.posterUrl ? (
@@ -184,8 +172,8 @@ export function ItemSheet({
         {statusOptions.length > 0 && (
           <div className="grid gap-2">
             <Label htmlFor={statusId}>Статус</Label>
-            {/* Размеры триггера – как у поля «Название» (`inputClass`): `data-[size=default]:h-11`,
-                потому что штатную высоту `h-9` задаёт такой же селектор. */}
+            {/* `data-[size=default]:h-11`: штатную высоту `h-9` задаёт такой же селектор,
+                обычный `h-11` не победит. */}
             <Select
               items={statusOptions}
               value={item.status}
@@ -197,8 +185,8 @@ export function ItemSheet({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {/* Внутренний отступ меню даёт SelectGroup, как в примерах shadcn: без него
-                    подсветка пункта упирается в края. */}
+                {/* SelectGroup нужен ради внутреннего отступа меню, как в примерах shadcn:
+                    без него подсветка пункта упирается в края. */}
                 <SelectGroup>
                   {statusOptions.map((option) => (
                     <SelectItem

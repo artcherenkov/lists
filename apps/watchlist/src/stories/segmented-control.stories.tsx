@@ -6,8 +6,6 @@ import { useState } from "react";
 
 import { KIND_FILTER_OPTIONS, KIND_OPTIONS } from "../sample/views.ts";
 
-// SegmentedControl управляется снаружи: выбранное значение хранит родитель. Здесь его хранит
-// история, чтобы по пунктам можно было кликать.
 function StatefulSegmentedControl({
   value: initialValue,
   ...props
@@ -25,7 +23,6 @@ const meta = {
     options: KIND_FILTER_OPTIONS,
     onChange: () => {},
   },
-  // Значение и обработчик подменяет состояние истории.
   argTypes: { onChange: { control: false }, options: { control: false } },
   render: (args) => <StatefulSegmentedControl {...args} />,
   parameters: { layout: "padded" },

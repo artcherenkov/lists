@@ -1,6 +1,5 @@
 import { defineConfig } from "vitest/config";
 
-// Unit-тесты живут в __tests__ рядом с кодом и не требуют браузера и сети.
 export default defineConfig({
   test: {
     include: [

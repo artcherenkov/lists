@@ -4,8 +4,6 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { preview } from "vite";
 
-// Кирпичик «приложение»: собранный apps/watchlist/dist на свободном порту 127.0.0.1.
-// Отдаёт его готовый vite preview. Один воркер – один сервер, тесты внутри воркера идут подряд.
 export type AppServer = { url: string; close: () => Promise<void> };
 
 const appRoot = fileURLToPath(new URL("../../apps/watchlist/", import.meta.url));
@@ -17,7 +15,7 @@ export async function startAppServer(): Promise<AppServer> {
   const server = await preview({
     root: appRoot,
     logLevel: "error",
-    // Порт 0 – система выдаёт свободный; host не 0.0.0.0, чтобы сервер не виден был из сети.
+    // host не 0.0.0.0: сервер не должен быть виден из сети; порт 0 – свободный.
     preview: { host: "127.0.0.1", port: 0, open: false },
   });
   const { port } = server.httpServer.address() as AddressInfo;

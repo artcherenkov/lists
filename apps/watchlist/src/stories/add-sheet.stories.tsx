@@ -9,13 +9,11 @@ import { Reopenable } from "./reopenable.tsx";
 
 type Search = typeof searchSampleCatalog;
 
-// Поиск, который не отвечает: «Ищу…» остаётся на экране.
 const searchNeverAnswers: Search = () => new Promise(() => {});
 
-// Поиск, который отклоняется: «Поиск не ответил».
 const searchFails: Search = () => Promise.reject(new Error("Поиск не ответил"));
 
-// Запрос набираем в поле поиска: шторка вынесена порталом, поэтому ищем по всему экрану.
+// Шторка вынесена порталом, поэтому поле ищем по всему экрану, а не в canvas.
 async function typeQuery(query: string) {
   const field = await screen.findByRole("textbox", { name: "Поиск" });
   await userEvent.type(field, query);
@@ -64,7 +62,6 @@ export const SearchFailed: Story = {
   play: () => typeQuery("город"),
 };
 
-// Ручной ввод: по строке «Добавить вручную» набранный запрос становится названием.
 export const ManualEntry: Story = {
   play: async () => {
     await typeQuery("Домашнее видео");

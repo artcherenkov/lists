@@ -31,27 +31,20 @@ export function useVisualViewportVars() {
 }
 
 /*
- * Лок без position:fixed на body. Стандартный приём (usePositionFixed в vaul,
- * position:fixed + top:-scrollY) переводит поддерево body в другой режим
- * тайлинга WebKit, и transform по такому поддереву (scale-эффект) мелькает
- * канвасом. На устройстве воспроизводилось только комбинацией «лок +
- * transform»: по отдельности оба чистые, разнос по кадрам не помогает. У vaul
- * тот же лок и та же болячка (issue #365, закрыт без исправления). Поэтому
- * документ не трогаем вовсе, а гасим сами жесты, как react-remove-scroll
- * у Radix: touchmove/wheel вне скроллера шторки — preventDefault, внутри —
- * арбитрирует шторка (drag против скролла, rubber-band она уже глушит).
- * overflow:hidden не альтернатива: на body iOS его игнорирует, на html —
- * сбрасывает прокрутку в ноль.
+ * Лок без position:fixed на body: position:fixed + top:-scrollY (usePositionFixed в vaul)
+ * переводит поддерево body в другой режим тайлинга WebKit, и transform по нему
+ * (scale-эффект) мелькает канвасом; у vaul та же проблема (issue #365). overflow:hidden
+ * не подходит: на body iOS его игнорирует, на html сбрасывает прокрутку. Поэтому гасим сами
+ * жесты, как react-remove-scroll у Radix: touchmove/wheel вне скроллера шторки –
+ * preventDefault, внутри арбитрирует шторка.
  *
- * Синглтон: при автофокусе лок обязан встать синхронно в обработчике клика,
- * до reveal-скролла WebKit (лок Base UI через setTimeout(0) опаздывал — отсюда
- * был мелькающий скроллбар подложки). Эффект шторки, пришедший позже, получает
- * тот же лок и владеет снятием. Повторный вызов unlock — no-op. Прокрутка
- * никуда не переезжает — и восстанавливать нечего.
+ * Синглтон: при автофокусе лок обязан встать синхронно в обработчике клика, до reveal-скролла
+ * WebKit; эффект шторки, пришедший позже, получает тот же лок и владеет снятием. Повторный
+ * unlock – no-op.
+ *
+ * Один лок на страницу: стек вложенных шторок не поддержан. Перетаскивание скроллбара мышью
+ * и клавиатурная прокрутка на десктопе не блокируются: событийного лока хватает для тач-веба.
  */
-// ponytail: один лок на страницу, стек вложенных шторок не поддержан;
-// перетаскивание скроллбара мышью и клавиатурная прокрутка на десктопе
-// не блокируются — событийного лока хватает для тач-веба
 let activeUnlock: (() => void) | null = null;
 
 export function lockBodyScroll() {
@@ -76,8 +69,8 @@ export function lockBodyScroll() {
   document.addEventListener("wheel", block, { passive: false, capture: true });
   // Индикатор прокрутки страницы iOS рисует поверх шторки при любом сдвиге
   // (панорама visual viewport под клавиатуру, хвост жеста открытия). Пока
-  // страница под локом, он бессмыслен — прячем. Работает с Safari 18.2,
-  // где scrollbar-width не поддержан — просто останется индикатор.
+  // страница под локом, он бессмыслен – прячем. Где scrollbar-width не поддержан
+  // (iOS Safari до 26.2, по caniuse), индикатор остаётся.
   const root = document.documentElement;
   const prevScrollbarWidth = root.style.scrollbarWidth;
   root.style.scrollbarWidth = "none";
@@ -92,7 +85,7 @@ export function lockBodyScroll() {
   return unlock;
 }
 
-/* Типы input, не открывающие клавиатуру, — список react-aria (isInput) */
+/* Список из react-aria (`isInput`). */
 const NON_TEXT_INPUT_TYPES = new Set([
   "checkbox",
   "radio",
@@ -115,21 +108,17 @@ export function isTextField(el: unknown): el is HTMLElement {
 }
 
 /*
- * Свой довод поля выше клавиатуры — замена reveal-скроллу WebKit, который мы
- * гасим при фокусе (см. focusKeyboardInput): кроме скролла контейнера, нативный
- * reveal панорамирует visual viewport, и position:fixed-шторка уезжает вверх —
- * комментарий react-aria: «may cause even fixed position elements to scroll
- * off the screen». Логика ожидания — их же scrollIntoView: клавиатура уже
- * видна — мерить можно следующим кадром, ещё нет — только после её появления
- * (resize у visualViewport), иначе граница видимой области неизвестна.
- * Скроллим на overlap, как alignFocusedKeyboardTarget из Base UI; запас 24px —
- * KEYBOARD_BUFFER react-aria.
+ * Замена reveal-скроллу WebKit, который мы гасим при фокусе (см. focusKeyboardInput):
+ * нативный reveal панорамирует visual viewport, и fixed-шторка уезжает вверх.
+ * Ожидание – как в scrollIntoView из react-aria: клавиатура уже видна – меряем следующим
+ * кадром; ещё нет – после её появления (resize у visualViewport), иначе граница видимой
+ * области неизвестна. Скроллим на величину перекрытия, как alignFocusedKeyboardTarget
+ * из Base UI; запас `slack` – как KEYBOARD_BUFFER в react-aria.
  */
 export function alignAboveKeyboard(el: HTMLElement, scroller: HTMLElement | null, slack = 24) {
   const vv = window.visualViewport;
   if (!vv || !scroller) return;
   const align = () => {
-    // низ видимой области (над клавиатурой) в координатах layout viewport
     const visibleBottom = vv.offsetTop + vv.height;
     const overlap = el.getBoundingClientRect().bottom + slack - visibleBottom;
     if (overlap > 0) scroller.scrollTop += overlap;
@@ -145,9 +134,8 @@ export function alignAboveKeyboard(el: HTMLElement, scroller: HTMLElement | null
 }
 
 /*
- * Дословный повтор приватной focusKeyboardInputWithoutPageScroll из
- * DrawerVirtualKeyboardProvider (Base UI 1.7). На стенде проверено, что важна
- * каждая деталь: transition:none и opacity:0 прячут кадр с подменённой
+ * Повтор приватной focusKeyboardInputWithoutPageScroll из DrawerVirtualKeyboardProvider
+ * (Base UI 1.7); важна каждая деталь: transition:none и opacity:0 прячут кадр с подменённой
  * геометрией (иначе виден промах каретки), transform уводит поле за экран,
  * чтобы reveal-скроллу WebKit было нечего доводить, preventScroll держит
  * внутренние скроллеры (иначе они погонятся за прямоугольником на -2000px),

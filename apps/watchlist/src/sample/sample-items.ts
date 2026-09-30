@@ -3,8 +3,7 @@ import dusk from "./posters/dusk.svg";
 import hills from "./posters/hills.svg";
 import sea from "./posters/sea.svg";
 
-// Подставные данные вехи 1. Модель записи настоящая появится в вехе 4 вместе со слоем данных,
-// поэтому здесь – минимум, чтобы экраны было на чём показать. Правил списка тут нет.
+// Подставные данные. Настоящая модель записи придёт со слоем данных; правил списка здесь нет.
 
 export type SampleKind = "movie" | "series";
 export type SampleStatus = "want" | "watching" | "watched" | "waiting";
@@ -46,8 +45,8 @@ export function isSampleStatus(value: string): value is SampleStatus {
   return value === "want" || value === "watching" || value === "watched" || value === "waiting";
 }
 
-// Порядок – как в списке: новые сверху. «Смотрю» нарочно одна запись: из неё выходит
-// пустая вкладка, когда запись удалена или сменила статус.
+// «Смотрю» нарочно одна запись: из неё выходит пустая вкладка, когда запись удалена
+// или сменила статус.
 export const SAMPLE_ITEMS: readonly SampleItem[] = [
   {
     id: "sample-1",

@@ -7,8 +7,6 @@ import { useState } from "react";
 
 import { Reopenable } from "./reopenable.tsx";
 
-// `Sheet` открыта, пока `open`; после закрытия (свайп, подложка, «Закрыть») родитель
-// убирает её, когда она доехала вниз.
 function SheetDemo({ longContent, onClosed }: { longContent: boolean; onClosed: () => void }) {
   const [open, setOpen] = useState(true);
   const paragraphCount = longContent ? 30 : 2;
@@ -56,7 +54,6 @@ type Story = StoryObj<typeof meta>;
 
 export const WithHeaderAndFooter: Story = {};
 
-// Содержимое не помещается: прокручивается только оно, шапка и подвал на месте.
 export const LongContent: Story = {
   args: { longContent: true },
 };

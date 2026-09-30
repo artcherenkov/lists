@@ -23,8 +23,7 @@ import { AddSheet, openAddSheet } from "./screens/add-sheet.tsx";
 import { ItemSheet } from "./screens/item-sheet.tsx";
 import { ListScreen } from "./screens/list-screen.tsx";
 
-// Экраны связаны подставным состоянием: записи в памяти, фильтры записи не отбирают.
-// Со слоем данных (веха 7) меняется только то, откуда берутся свойства и что делают обработчики.
+// Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
 export function App() {
   const list = useSampleList();
   const [tab, setTab] = useState(ALL_TAB);
@@ -34,10 +33,8 @@ export function App() {
 
   const tabItems = itemsOfTab(list.items, tab);
   const changedFilters = countChangedFilters(filters);
-  // Удалённая запись остаётся в `list.items`, поэтому карточка доезжает вниз с прежним видом.
   const opened = list.items.find((item) => item.id === openedId);
 
-  // Новая запись всегда «хочу» – показываем её вкладку.
   const showAdded = () => setTab("want");
 
   const deleteOpened = () => {

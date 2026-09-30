@@ -13,16 +13,14 @@ const config: StorybookConfig = {
     disableTelemetry: true,
     disableWhatsNewNotifications: true,
   },
-  // Без чек-листа «Get started» в боковой панели.
   features: { sidebarOnboardingChecklist: false },
   // Tailwind, React и алиасы Storybook берёт из vite.config.ts приложения.
   viteFinal: (viteConfig) =>
     mergeConfig(viteConfig, {
       build: {
         rolldownOptions: {
-          // @base-ui помечает файлы директивой "use client" для серверных компонентов React.
-          // В Storybook сервера нет, и сборщик по 100+ раз предупреждает, что директиву
-          // не сохранит: эти предупреждения прячут настоящие. Остальные идут штатным путём.
+          // @base-ui помечает файлы директивой "use client", и сборщик на каждый предупреждает,
+          // что не сохранит её: эти предупреждения прячут настоящие. Остальные идут штатным путём.
           onwarn(warning, defaultHandler) {
             const isUseClientDirective =
               warning.code === "MODULE_LEVEL_DIRECTIVE" && warning.message.includes('"use client"');

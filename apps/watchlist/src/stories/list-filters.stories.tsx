@@ -14,7 +14,6 @@ const meta = {
   component: StatefulListFilters,
   args: { resultCount: 12 },
   decorators: [
-    // Кнопка – справа, как в шапке списка; внизу место под открытое окно.
     (Story) => (
       <div className="flex h-96 justify-end p-4">
         <div>

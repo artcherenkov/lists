@@ -14,8 +14,6 @@ import { ItemSheet } from "../screens/item-sheet.tsx";
 import { Reopenable } from "./reopenable.tsx";
 import { sampleItem } from "./sample-item.ts";
 
-// Запись живёт в состоянии истории: выбор статуса и типа меняет её, как в приложении.
-// Варианты статуса зависят от типа; без статуса (`withoutStatus`) блок прячется.
 function ItemSheetDemo({
   item: initialItem,
   withoutStatus = false,
@@ -50,10 +48,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Запись из каталога: постер и название показаны, заменить их нельзя.
 export const FromCatalog: Story = {};
 
-// Запись заведена руками: вместо постера – поля названия и типа.
 export const Manual: Story = {
   args: { item: sampleItem("sample-8") },
 };

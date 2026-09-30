@@ -16,8 +16,7 @@ export interface ListFiltersValue {
 }
 
 /**
- * Кнопка-значок «Фильтры» и окно с ними. Число действующих фильтров – кружок в углу кнопки.
- * Что считать действующим фильтром и сколько записей нашлось – решает родитель: сюда приходят
+ * Что считать действующим фильтром и сколько записей нашлось, решает родитель: сюда приходят
  * готовые числа.
  */
 export function ListFilters({
@@ -34,7 +33,7 @@ export function ListFilters({
   /** Первый вариант – «без фильтра» (например, «Все»). */
   kindFilterOptions: readonly ChoiceOption[];
   ratingBounds: readonly [min: number, max: number];
-  /** Число в кружке на кнопке; при нуле кружка нет. */
+  /** Число действующих фильтров. При нуле на кнопке нет числа, а «Сбросить» недоступна. */
   activeCount: number;
   /** `undefined` – ещё считается. */
   resultCount?: number;
@@ -44,16 +43,15 @@ export function ListFilters({
 
   return (
     <Popover>
-      {/* relative – чтобы кружок с числом встал в угол кнопки. С брейкпойнта `xs` значок крупнее
-          (как `icon-lg`): он стоит в одном ряду с вкладками главного экрана и меняет размер
-          вместе с ними, см. `list-screen.tsx`. */}
+      {/* Размер значка меняется на той же границе, что у вкладок главного экрана: они стоят
+          в одном ряду, см. брейкпойнт `xs` в styles.css. */}
       <PopoverTrigger
         render={<Button variant="outline" size="icon" className="relative xs:size-10" />}
         aria-label={activeCount ? `Фильтры · ${activeCount}` : "Фильтры"}
       >
         <SlidersHorizontalIcon />
         {activeCount > 0 && (
-          // Число уже в aria-label кнопки; кольцо цвета фона отделяет кружок от рамки.
+          // Число уже в aria-label кнопки.
           <Badge
             aria-hidden="true"
             className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full px-1 tabular-nums ring-2 ring-background"
