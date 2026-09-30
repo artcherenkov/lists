@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 
 import { PosterCard, type PosterCardView } from "./poster-card.tsx";
 
-/** Экран списка: шапка, фильтры, вкладки, сетка постеров и плавающая кнопка «+». */
+/** Экран списка: шапка, ряд из вкладок и значка фильтров, сетка постеров и плавающая кнопка «+». */
 export function ListScreen({
   title,
   tabs,
@@ -25,7 +25,7 @@ export function ListScreen({
   tabs: readonly ChoiceOption[];
   tab: string;
   onTabChange: (tab: string) => void;
-  /** Кнопка и окно фильтров: их собирает родитель, экран лишь отводит им место. */
+  /** Значок и окно фильтров: их собирает родитель, экран лишь отводит им место справа от вкладок. */
   filtersSlot: ReactNode;
   /** `undefined` – записи ещё не загрузились. */
   items: readonly PosterCardView[] | undefined;
@@ -41,30 +41,45 @@ export function ListScreen({
     // Отступы через env(): с viewport-fit=cover контент тянется под статус-зону
     // и стеклянные контролы, safe-area компенсирует.
     <main className="mx-auto max-w-4xl px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
-      {/* h-16 — высота под тост: он падает сверху по центру и накрывал фильтры. */}
-      <header className="mb-4 flex h-16 items-center justify-between gap-4">
+      {/* h-16 — высота под тост: он падает сверху по центру и накрывал ряд под шапкой. */}
+      <header className="mb-3 flex h-16 items-center justify-between gap-4">
         <h1 className="font-heading text-xl font-medium">{title}</h1>
         <Button variant="ghost" size="icon-lg" aria-label="Профиль" onClick={onOpenProfile}>
           <UserIcon className="size-6" />
         </Button>
       </header>
 
-      <div className="mb-3 flex justify-end">{filtersSlot}</div>
-
-      <Tabs value={tab} onValueChange={(value) => onTabChange(String(value))} className="mb-4">
-        {/* min-h, а не h: собственный h-9 у списка перебивает высоту по специфичности. */}
-        <TabsList className="min-h-12 w-full">
-          {tabs.map(({ value, label }) => (
-            // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».
-            // h-full: у shadcn плашка на 1px ниже, и зазор сверху и снизу 3,5px ложится неровно.
-            // Скругления – из vega: у списка `rounded-lg`, у плашки `rounded-md`, они концентричны
-            // при отступе 3px, а от высоты не зависят.
-            <TabsTrigger key={value} value={value} className="h-full flex-auto text-base">
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="mb-4 flex items-center gap-2">
+        <Tabs
+          value={tab}
+          onValueChange={(value) => onTabChange(String(value))}
+          className="min-w-0 flex-1"
+        >
+          {/* Два размера ряда. До 384px включительно – штатный vega: дорожка 36px, текст 14px,
+              значок фильтров 36px (на 375px, iPhone SE и mini, текст 16px не умещается).
+              Шире – крупный: 40px и 16px. Значок фильтров меняет размер на той же границе,
+              см. `list-filters.tsx`. Высота дорожки: у shadcn она задана селектором
+              `group-data-horizontal/tabs:h-9`; переопределение несёт тот же селектор, чтобы
+              победа не зависела от порядка правил в CSS. */}
+          <TabsList className="w-full min-[385px]:group-data-horizontal/tabs:h-10">
+            {tabs.map(({ value, label }) => (
+              // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».
+              // h-full: у shadcn плашка на 1px ниже внутренней высоты дорожки, и зазоры сверху
+              // и снизу выходят 4px и 3px; с h-full оба по 3px.
+              // Скругления – из vega: у списка `rounded-lg`, у плашки `rounded-md`, они концентричны
+              // при отступе 3px, а от высоты не зависят.
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="h-full flex-auto min-[385px]:text-base"
+              >
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        {filtersSlot}
+      </div>
 
       {items?.length === 0 && (
         <p className="py-12 text-center text-sm text-muted-foreground">{emptyText}</p>

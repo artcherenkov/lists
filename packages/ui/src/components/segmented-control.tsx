@@ -11,7 +11,7 @@ export interface ChoiceOption {
 // а Tabs хранит выбор в Base UI и не умеет радио внутри. Поэтому «выбран» и фокус читаем
 // через `has-[:checked]` и `has-[:focus-visible]` на подписи вместо `data-active` и `focus-visible`.
 // При обновлении пресета сверяй классы с `ui/tabs.tsx`.
-// Крупный размер (вкладки главного, `min-h-12`, `text-base`) остаётся у самого Tabs, здесь – компактный.
+// Крупный размер (вкладки главного: 40px, `text-base`) остаётся у самого Tabs, здесь – компактный.
 const trackClass = "flex h-9 w-fit max-w-full rounded-lg bg-muted p-[3px] text-muted-foreground";
 const optionClass =
   "inline-flex cursor-pointer items-center justify-center rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all select-none hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground has-[:checked]:bg-background has-[:checked]:text-foreground has-[:checked]:shadow-sm dark:has-[:checked]:border-input dark:has-[:checked]:bg-input/30 dark:has-[:checked]:text-foreground has-[:focus-visible]:border-ring has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-ring";

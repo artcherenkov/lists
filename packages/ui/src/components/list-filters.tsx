@@ -5,6 +5,7 @@ import { useId } from "react";
 
 import { formatRatingRange } from "../lib/rating-range";
 import { SegmentedControl } from "./segmented-control";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "./ui/popover";
 import { Slider } from "./ui/slider";
@@ -15,8 +16,9 @@ export interface ListFiltersValue {
 }
 
 /**
- * Кнопка «Фильтры» и окно с ними. Что считать действующим фильтром и сколько записей
- * нашлось – решает родитель: сюда приходят готовые числа.
+ * Кнопка-значок «Фильтры» и окно с ними. Число действующих фильтров – кружок в углу кнопки.
+ * Что считать действующим фильтром и сколько записей нашлось – решает родитель: сюда приходят
+ * готовые числа.
  */
 export function ListFilters({
   value,
@@ -32,7 +34,7 @@ export function ListFilters({
   /** Первый вариант – «без фильтра» (например, «Все»). */
   kindFilterOptions: readonly ChoiceOption[];
   ratingBounds: readonly [min: number, max: number];
-  /** Число на кнопке «Фильтры · N». */
+  /** Число в кружке на кнопке; при нуле кружка нет. */
   activeCount: number;
   /** `undefined` – ещё считается. */
   resultCount?: number;
@@ -43,9 +45,23 @@ export function ListFilters({
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" size="lg" />}>
-        <SlidersHorizontalIcon data-icon="inline-start" />
-        {activeCount ? `Фильтры · ${activeCount}` : "Фильтры"}
+      {/* relative – чтобы кружок с числом встал в угол кнопки. Размер 36px, а шире 384px – 40px
+          (как `icon-lg`): значок стоит в одном ряду с вкладками главного экрана, и высота у них
+          одна на обеих ширинах, см. `list-screen.tsx`. */}
+      <PopoverTrigger
+        render={<Button variant="outline" size="icon" className="relative min-[385px]:size-10" />}
+        aria-label={activeCount ? `Фильтры · ${activeCount}` : "Фильтры"}
+      >
+        <SlidersHorizontalIcon />
+        {activeCount > 0 && (
+          // Число уже в aria-label кнопки; кольцо цвета фона отделяет кружок от рамки.
+          <Badge
+            aria-hidden="true"
+            className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full px-1 tabular-nums ring-2 ring-background"
+          >
+            {activeCount}
+          </Badge>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="end"
