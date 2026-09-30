@@ -1,16 +1,19 @@
+import type { PageClock } from "./clock.ts";
 import type { AppServer } from "./server.ts";
 
 import { test as base, expect } from "@playwright/test";
 
 import { isOwnAddress } from "./address.ts";
+import { installPageClock } from "./clock.ts";
 import { startAppServer } from "./server.ts";
 
 export { expect };
+export { swipeDown } from "./swipe.ts";
 
 // Кирпичики e2e. Тест перечисляет нужные в аргументах, Playwright создаёт только их.
-// На воркер: server. На тест: ownAddressesOnly, он включён всегда.
+// На воркер: server. На тест: ownAddressesOnly, он включён всегда; clock – по запросу теста.
 type WorkerFixtures = { server: AppServer };
-type TestFixtures = { ownAddressesOnly: void };
+type TestFixtures = { ownAddressesOnly: void; clock: PageClock };
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Собранное приложение на свободном порту; браузер открывает его по baseURL.
@@ -25,6 +28,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
   baseURL: async ({ server }, use) => {
     await use(server.url);
+  },
+  // Часы страницы: тест получает управление временем и обязан взять `clock` до `page.goto`.
+  clock: async ({ page }, use) => {
+    await use(await installPageClock(page));
   },
   // Решение 14 плана: клиент обращается только к нашим адресам. Любой запрос страницы
   // на чужой адрес проваливает тест, даже если страница это пережила.
