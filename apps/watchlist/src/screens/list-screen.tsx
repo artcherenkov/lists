@@ -53,16 +53,13 @@ export function ListScreen({
 
       <Tabs value={tab} onValueChange={(value) => onTabChange(String(value))} className="mb-4">
         {/* min-h, а не h: собственный h-9 у списка перебивает высоту по специфичности. */}
-        <TabsList className="min-h-12 w-full rounded-full">
+        <TabsList className="min-h-12 w-full">
           {tabs.map(({ value, label }) => (
             // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».
             // h-full: у shadcn плашка на 1px ниже, и зазор сверху и снизу 3,5px ложится неровно.
-            // Список и плашка – пилюли, как в base-rhea при штатной высоте, поэтому концентричны сами.
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="h-full flex-auto rounded-full text-base"
-            >
+            // Скругления – из vega: у списка `rounded-lg`, у плашки `rounded-md`, они концентричны
+            // при отступе 3px, а от высоты не зависят.
+            <TabsTrigger key={value} value={value} className="h-full flex-auto text-base">
               {label}
             </TabsTrigger>
           ))}

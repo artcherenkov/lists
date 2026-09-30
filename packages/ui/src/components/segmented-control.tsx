@@ -4,16 +4,17 @@ export interface ChoiceOption {
   label: string;
 }
 
-// Классы дорожки и пункта – копия TabsList и TabsTrigger из `ui/tabs.tsx` без полосок,
-// вертикального вида и классов, которые там перебиваются (`border-transparent!` гасит рамку
-// выбранного пункта в тёмной теме и рамку фокуса, поэтому у нас рамка просто прозрачная).
+// Классы дорожки и пункта – копия TabsList и TabsTrigger из `ui/tabs.tsx` (пресет vega) без
+// полосок `line`, вертикального вида, иконок и `flex-1`: дорожка у нас `w-fit`, пункты по ширине
+// содержимого и не растягиваются.
 // Общим кодом их не сделать: `ui/tabs.tsx` сгенерирован CLI shadcn и править его нельзя,
 // а Tabs хранит выбор в Base UI и не умеет радио внутри. Поэтому «выбран» и фокус читаем
-// через `has-[:checked]` и `has-[:focus-visible]` на подписи.
+// через `has-[:checked]` и `has-[:focus-visible]` на подписи вместо `data-active` и `focus-visible`.
+// При обновлении пресета сверяй классы с `ui/tabs.tsx`.
 // Крупный размер (вкладки главного, `min-h-12`, `text-base`) остаётся у самого Tabs, здесь – компактный.
-const trackClass = "flex h-9 w-fit max-w-full rounded-full bg-muted p-[3px] text-muted-foreground";
+const trackClass = "flex h-9 w-fit max-w-full rounded-lg bg-muted p-[3px] text-muted-foreground";
 const optionClass =
-  "inline-flex cursor-pointer items-center justify-center rounded-full border border-transparent px-3 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all select-none hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground has-[:checked]:bg-background has-[:checked]:text-foreground dark:has-[:checked]:bg-input/30 dark:has-[:checked]:text-foreground has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-ring";
+  "inline-flex cursor-pointer items-center justify-center rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all select-none hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground has-[:checked]:bg-background has-[:checked]:text-foreground has-[:checked]:shadow-sm dark:has-[:checked]:border-input dark:has-[:checked]:bg-input/30 dark:has-[:checked]:text-foreground has-[:focus-visible]:border-ring has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-ring";
 
 // Подпись выглядит как `Label` («Название», «Статус» у выпадающего списка) в сетке с `gap-2`:
 // те же `text-sm leading-none font-medium`, отступ `mb-2` вместо зазора сетки, потому что
@@ -21,9 +22,10 @@ const optionClass =
 const legendClass = "mb-2 text-sm leading-none font-medium";
 
 /**
- * Компактный выбор одного варианта: дорожка-пилюля, выбранный пункт – пилюля внутри, как у
- * вкладок списка. Внутри – нативный radio: клавиатура, группировка и «выбран» достаются даром.
- * Группа – `fieldset` с `legend` из `label`: так она получает имя для скринридера.
+ * Компактный выбор одного варианта: дорожка со скруглёнными углами, выбранный пункт – плашка
+ * внутри, как у компактных вкладок пресета. Внутри – нативный radio: клавиатура, группировка
+ * и «выбран» достаются даром. Группа – `fieldset` с `legend` из `label`: так она получает имя
+ * для скринридера.
  *
  * Для вариантов, которые не помещаются в строку, не подходит: нужен другой вид выбора.
  */
