@@ -53,15 +53,15 @@ export function ListScreen({
 
       <Tabs value={tab} onValueChange={(value) => onTabChange(String(value))} className="mb-4">
         {/* min-h, а не h: собственный h-8 у списка перебивает высоту по специфичности. */}
-        <TabsList className="min-h-12 w-full">
+        <TabsList className="min-h-12 w-full rounded-full">
           {tabs.map(({ value, label }) => (
             // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».
-            // Радиус выбранной вкладки – радиус списка минус его отступ 3px (в shadcn у обоих
-            // rounded-2xl): так углы идут параллельно рамке, а не расходятся.
+            // h-full: у shadcn плашка на 1px ниже, и зазор сверху и снизу 3,5px ложится неровно.
+            // Список и плашка – пилюли, как в base-rhea при штатной высоте, поэтому концентричны сами.
             <TabsTrigger
               key={value}
               value={value}
-              className="flex-auto rounded-[calc(var(--radius-2xl)-3px)] text-base"
+              className="h-full flex-auto rounded-full text-base"
             >
               {label}
             </TabsTrigger>
