@@ -18,12 +18,12 @@ test("выбор результата поиска добавляет запис
   await page.getByRole("button", { name: "Добавить" }).click();
   const sheet = page.getByRole("dialog", { name: "Добавить" });
 
-  await test.step("запрос показывает подходящие результаты и пункт «Тут нет моего варианта»", async () => {
+  await test.step("запрос показывает подходящие результаты и пункт ручного ввода с набранным запросом", async () => {
     await page.getByRole("textbox", { name: "Поиск" }).fill("Звёздный");
 
     await expect(sheet.getByRole("button", { name: /Звёздный ветер/ })).toBeVisible();
     await expect(sheet.getByRole("button", { name: /Звёздная пыль севера/ })).toHaveCount(0);
-    await expect(sheet.getByRole("button", { name: "Тут нет моего варианта" })).toBeVisible();
+    await expect(sheet.getByRole("button", { name: /Звёздный.*Добавить вручную/ })).toBeVisible();
   });
 
   await test.step("выбор результата закрывает шторку, запись появляется на вкладке «Хочу»", async () => {
@@ -62,9 +62,9 @@ test("запись без варианта в поиске заводится р
   await page.getByRole("button", { name: "Добавить" }).click();
   const sheet = page.getByRole("dialog", { name: "Добавить" });
 
-  await test.step("«Тут нет моего варианта» переносит запрос в поле названия", async () => {
+  await test.step("пункт «Добавить вручную» переносит запрос в поле названия", async () => {
     await page.getByRole("textbox", { name: "Поиск" }).fill("Неведомое кино");
-    await sheet.getByRole("button", { name: "Тут нет моего варианта" }).click();
+    await sheet.getByRole("button", { name: /Неведомое кино.*Добавить вручную/ }).click();
 
     await expect(sheet.getByLabel("Название")).toHaveValue("Неведомое кино");
     await expect(sheet.getByRole("radio", { name: "Фильм" })).toBeChecked();
@@ -87,7 +87,7 @@ test("«Вернуться к поиску» из ручного ввода во
   await page.getByRole("button", { name: "Добавить" }).click();
   const sheet = page.getByRole("dialog", { name: "Добавить" });
   await page.getByRole("textbox", { name: "Поиск" }).fill("Неведомое кино");
-  await sheet.getByRole("button", { name: "Тут нет моего варианта" }).click();
+  await sheet.getByRole("button", { name: /Неведомое кино.*Добавить вручную/ }).click();
 
   await sheet.getByRole("button", { name: "Вернуться к поиску" }).click();
 
@@ -144,7 +144,7 @@ test("один символ поиска не запускает, а прежн�
     await clock.advance(1000);
 
     await expect(sheet.getByText("Ищу…")).toHaveCount(0);
-    await expect(sheet.getByRole("button", { name: "Тут нет моего варианта" })).toHaveCount(0);
+    await expect(sheet.getByRole("button", { name: /Добавить вручную/ })).toHaveCount(0);
   });
 
   await test.step("результаты прошлого запроса не возвращаются после короткого", async () => {

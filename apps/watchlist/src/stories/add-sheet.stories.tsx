@@ -66,10 +66,12 @@ export const SearchFailed: Story = {
   play: () => typeQuery("город"),
 };
 
-// Ручной ввод: по «Тут нет моего варианта» набранный запрос становится названием.
+// Ручной ввод: по строке «Добавить вручную» набранный запрос становится названием.
 export const ManualEntry: Story = {
   play: async () => {
     await typeQuery("Домашнее видео");
-    await userEvent.click(await screen.findByRole("button", { name: "Тут нет моего варианта" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Домашнее видео.*Добавить вручную/ }),
+    );
   },
 };

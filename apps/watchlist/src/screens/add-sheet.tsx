@@ -1,4 +1,5 @@
 import type { ChipOption } from "@lists/ui/components/chips";
+import type { ReactNode } from "react";
 
 import { Sheet, openSheetWithAutofocus } from "@lists/sheet";
 import { Chips } from "@lists/ui/components/chips";
@@ -88,7 +89,7 @@ export function AddSheet<T extends SearchResultView>({
     setDraft((current) => ({ ...current, ...fields }));
 
   const trimmedQuery = query.trim();
-  // Отработал ли поиск по текущему запросу. Пока нет — «тут нет моего варианта» предлагать рано,
+  // Отработал ли поиск по текущему запросу. Пока нет – вводить вручную предлагать рано,
   // а результаты прошлого запроса остаются на экране, чтобы список не мигал между буквами.
   const searched = outcome?.query === trimmedQuery;
   const results = outcome?.results ?? [];
@@ -188,26 +189,12 @@ export function AddSheet<T extends SearchResultView>({
         <ul className="-mx-4 divide-y">
           {results.map((result) => (
             <li key={result.id}>
-              <button
-                type="button"
+              <ResultRow
+                title={result.title}
+                details={result.details}
+                cover={<Poster url={result.posterUrl} />}
                 onClick={() => finishWith(() => onPick(result))}
-                className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-accent"
-              >
-                {result.posterUrl ? (
-                  <img
-                    src={result.posterUrl}
-                    alt=""
-                    loading="lazy"
-                    className="h-16 w-11 shrink-0 rounded object-cover"
-                  />
-                ) : (
-                  <div className="h-16 w-11 shrink-0 rounded bg-muted" />
-                )}
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium">{result.title}</span>
-                  <span className="block text-xs text-muted-foreground">{result.details}</span>
-                </span>
-              </button>
+              />
             </li>
           ))}
           {searched && outcome.failed && (
@@ -215,13 +202,8 @@ export function AddSheet<T extends SearchResultView>({
           )}
           {searched ? (
             <li>
-              <button
-                type="button"
-                onClick={goManual}
-                className="w-full px-4 py-3 text-left text-sm text-muted-foreground hover:bg-accent"
-              >
-                Тут нет моего варианта
-              </button>
+              {/* Без обложки: записи, которой нет в поиске, взять её неоткуда. */}
+              <ResultRow title={trimmedQuery} details="Добавить вручную" onClick={goManual} />
             </li>
           ) : (
             <li className="px-4 py-3 text-sm text-muted-foreground">Ищу…</li>
@@ -259,5 +241,43 @@ export function AddSheet<T extends SearchResultView>({
         </div>
       )}
     </Sheet>
+  );
+}
+
+/**
+ * Строка списка поиска: обложка (если есть), название и подпись. Высота – по обложке
+ * (`h-16` и отступы `py-2` дают 5rem), поэтому строка без обложки не выпадает из ритма списка.
+ */
+function ResultRow({
+  title,
+  details,
+  cover,
+  onClick,
+}: {
+  title: string;
+  details: string;
+  cover?: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-20 w-full items-center gap-3 px-4 py-2 text-left hover:bg-accent"
+    >
+      {cover}
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium">{title}</span>
+        <span className="block text-xs text-muted-foreground">{details}</span>
+      </span>
+    </button>
+  );
+}
+
+function Poster({ url }: { url?: string }) {
+  return url ? (
+    <img src={url} alt="" loading="lazy" className="h-16 w-11 shrink-0 rounded object-cover" />
+  ) : (
+    <div className="h-16 w-11 shrink-0 rounded bg-muted" />
   );
 }
