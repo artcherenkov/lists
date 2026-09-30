@@ -87,8 +87,13 @@
 - `pnpm install` – зависимости. Новые ставит только `pnpm add` (`-w` для корня,
   `--filter <пакет>` для пакета): `package.json` и `pnpm-lock.yaml` руками не правим.
 - `pnpm dev` – Watchlist на `http://localhost:5175`.
-- `pnpm check` – все проверки: `fmt:check`, `lint`, `check-types`, unit и e2e. Перед push
-  хук `.husky/pre-push` гоняет быстрые – без e2e.
+- `pnpm storybook` – Storybook дизайн-системы на `http://localhost:6006`: токены и компоненты
+  `packages/ui` в светлой и тёмной теме. Истории – `packages/ui/src/stories/*.stories.tsx`
+  (не в `components/ui`: там сгенерированное), конфиг – `packages/ui/.storybook`. Сборка –
+  `pnpm build-storybook`, вывод в `packages/ui/storybook-static`.
+- `pnpm check` – все проверки: `fmt:check`, `lint`, `check-types`, сборка Storybook, unit
+  и e2e. Перед push хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types`
+  и unit – без сборки Storybook и e2e.
 - `pnpm test:unit` – Vitest. `pnpm test:e2e` – сборка приложения и Playwright на ней.
   Перед написанием тестов прочитай [docs/testing.md](docs/testing.md).
 - `pnpm fmt` – форматирование oxfmt. Из него исключены сгенерированное

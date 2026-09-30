@@ -1,0 +1,10 @@
+/* Так же, как в apps/watchlist/src/styles.css: Tailwind подключает приложение, а не пакет. */
+@import "tailwindcss";
+@import "../src/styles.css";
+
+/* Страница документации светлая всегда, а образцы на ней – в выбранной теме: без фона
+   тёмные компоненты оказались бы на белом. */
+.docs-story {
+  background-color: var(--background);
+  color: var(--foreground);
+}
