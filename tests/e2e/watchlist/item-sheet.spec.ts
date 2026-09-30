@@ -256,3 +256,25 @@ test("свайп вниз по пункту списка статусов не �
   await expect(card).toBeVisible();
   expect((await panel.boundingBox())?.y).toBe(topBefore);
 });
+
+// Пункты стояли прямо в списке без `SelectGroup`, который даёт меню внутренний отступ,
+// и подсветка пункта упиралась в края меню.
+test("пункты списка статусов не упираются в края меню", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Ночной экспресс/ }).click();
+  await statusSelect(page).hover({ trial: true });
+  await statusSelect(page).click();
+  const menu = page.getByRole("listbox");
+  await expect(statusOption(page, "Смотрю")).toBeVisible();
+
+  const menuBox = await menu.boundingBox();
+  const firstBox = await statusOption(page, "Хочу").boundingBox();
+  const lastBox = await statusOption(page, "Посмотрел").boundingBox();
+  if (!menuBox || !firstBox || !lastBox) throw new Error("У меню или пунктов нет размеров");
+
+  const minGap = 4;
+  expect(firstBox.x - menuBox.x).toBeGreaterThanOrEqual(minGap);
+  expect(menuBox.x + menuBox.width - (firstBox.x + firstBox.width)).toBeGreaterThanOrEqual(minGap);
+  expect(firstBox.y - menuBox.y).toBeGreaterThanOrEqual(minGap);
+  expect(menuBox.y + menuBox.height - (lastBox.y + lastBox.height)).toBeGreaterThanOrEqual(minGap);
+});

@@ -8,6 +8,7 @@ import { Label } from "@lists/ui/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -199,16 +200,20 @@ export function ItemSheet({
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                {statusOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    className="min-h-10 text-base"
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
+              <SelectContent>
+                {/* Внутренний отступ меню даёт SelectGroup, как в примерах shadcn: без него
+                    подсветка пункта упирается в края. */}
+                <SelectGroup>
+                  {statusOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="min-h-10 text-base"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
