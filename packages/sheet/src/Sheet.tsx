@@ -269,6 +269,7 @@ export function Sheet({
       return () => clearTimeout(t);
     }
     // scaleBackground читается только в момент открытия, смена на лету не поддержана
+    // Заодно глушит react/refs и set-state-in-effect: записи onClosedRef и setMounted осознанные
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
