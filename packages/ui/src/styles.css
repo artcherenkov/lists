@@ -154,3 +154,8 @@
   --sheet-fg: var(--popover-foreground);
   --sheet-handle: var(--muted);
 }
+
+/* Граница, с которой вкладки главного экрана и значок фильтров становятся крупнее (`xs:`). */
+@theme {
+  --breakpoint-xs: 24.0625rem;
+}

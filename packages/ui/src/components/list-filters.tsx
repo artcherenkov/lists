@@ -44,11 +44,11 @@ export function ListFilters({
 
   return (
     <Popover>
-      {/* relative – чтобы кружок с числом встал в угол кнопки. Размер 36px, а шире 384px – 40px
-          (как `icon-lg`): значок стоит в одном ряду с вкладками главного экрана, и высота у них
-          одна на обеих ширинах, см. `list-screen.tsx`. */}
+      {/* relative – чтобы кружок с числом встал в угол кнопки. С брейкпойнта `xs` значок крупнее
+          (как `icon-lg`): он стоит в одном ряду с вкладками главного экрана и меняет размер
+          вместе с ними, см. `list-screen.tsx`. */}
       <PopoverTrigger
-        render={<Button variant="outline" size="icon" className="relative min-[385px]:size-10" />}
+        render={<Button variant="outline" size="icon" className="relative xs:size-10" />}
         aria-label={activeCount ? `Фильтры · ${activeCount}` : "Фильтры"}
       >
         <SlidersHorizontalIcon />

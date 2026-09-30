@@ -55,24 +55,19 @@ export function ListScreen({
           onValueChange={(value) => onTabChange(String(value))}
           className="min-w-0 flex-1"
         >
-          {/* Два размера ряда. До 384px включительно – штатный vega: дорожка 36px, текст 14px,
-              значок фильтров 36px (на 375px, iPhone SE и mini, текст 16px не умещается).
-              Шире – крупный: 40px и 16px. Значок фильтров меняет размер на той же границе,
-              см. `list-filters.tsx`. Высота дорожки: у shadcn она задана селектором
+          {/* Ниже брейкпойнта `xs` ряд штатный: на узких экранах (iPhone SE, mini) крупный
+              текст не умещается. Значок фильтров меняет размер на той же границе, см.
+              `list-filters.tsx`. Высота дорожки: у shadcn она задана селектором
               `group-data-horizontal/tabs:h-9`; переопределение несёт тот же селектор, чтобы
               победа не зависела от порядка правил в CSS. */}
-          <TabsList className="w-full min-[385px]:group-data-horizontal/tabs:h-10">
+          <TabsList className="w-full xs:group-data-horizontal/tabs:h-10">
             {tabs.map(({ value, label }) => (
               // flex-auto вместо flex-1: ширина от слова, а не поровну — «Все» короче «Посмотрел».
               // h-full: у shadcn плашка на 1px ниже внутренней высоты дорожки, и зазоры сверху
               // и снизу выходят 4px и 3px; с h-full оба по 3px.
               // Скругления – из vega: у списка `rounded-lg`, у плашки `rounded-md`, они концентричны
               // при отступе 3px, а от высоты не зависят.
-              <TabsTrigger
-                key={value}
-                value={value}
-                className="h-full flex-auto min-[385px]:text-base"
-              >
+              <TabsTrigger key={value} value={value} className="h-full flex-auto xs:text-base">
                 {label}
               </TabsTrigger>
             ))}
