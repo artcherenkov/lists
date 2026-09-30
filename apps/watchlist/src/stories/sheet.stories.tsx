@@ -49,8 +49,6 @@ const meta = {
     </Reopenable>
   ),
   args: { longContent: false },
-  // Автодокументации нет: шторка выходит порталом поверх страницы и на Docs не следует теме.
-  tags: ["!autodocs"],
 } satisfies Meta<{ longContent: boolean }>;
 
 export default meta;

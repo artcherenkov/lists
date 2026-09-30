@@ -45,8 +45,6 @@ const meta = {
   ),
   args: { item: sampleItem("sample-1") },
   argTypes: { item: { control: false } },
-  // Автодокументации нет: шторка выходит порталом поверх страницы и на Docs не следует теме.
-  tags: ["!autodocs"],
 } satisfies Meta<Omit<ComponentProps<typeof ItemSheetDemo>, "onClosed">>;
 
 export default meta;

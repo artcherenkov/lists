@@ -19,6 +19,7 @@ const meta = {
       </div>
     ),
   ],
+  tags: ["autodocs"],
 } satisfies Meta<typeof PosterCard>;
 
 export default meta;

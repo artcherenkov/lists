@@ -23,9 +23,6 @@ const meta = {
       </div>
     ),
   ],
-  // Автодокументации нет: окно выходит порталом, и на странице Docs ему пришлось бы
-  // рендериться в отдельном iframe, где переключатель темы не действует.
-  tags: ["!autodocs"],
 } satisfies Meta<typeof StatefulListFilters>;
 
 export default meta;

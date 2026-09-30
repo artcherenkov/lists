@@ -2,8 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   title: "Дизайн-система/Токены",
-  // Страница токенов сама себе документация, свойств у неё нет.
-  tags: ["!autodocs"],
   parameters: { layout: "padded" },
 } satisfies Meta;
 

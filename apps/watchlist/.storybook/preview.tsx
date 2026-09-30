@@ -7,9 +7,6 @@ import "../src/styles.css";
 import "./preview.css";
 
 const preview: Preview = {
-  // Автодокументация со свойствами – у каждой истории, кроме тех, что отказались сами.
-  // Страницы с порталами и шторками от неё отказываются: на Docs они не следуют теме.
-  tags: ["autodocs"],
   decorators: [
     // Как в приложении: тёмная тема – класс `dark` на <html>, светлая – без класса.
     withThemeByClassName({ themes: { light: "", dark: "dark" }, defaultTheme: "light" }),

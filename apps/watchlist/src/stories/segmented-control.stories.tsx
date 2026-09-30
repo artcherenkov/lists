@@ -29,6 +29,7 @@ const meta = {
   argTypes: { onChange: { control: false }, options: { control: false } },
   render: (args) => <StatefulSegmentedControl {...args} />,
   parameters: { layout: "padded" },
+  tags: ["autodocs"],
 } satisfies Meta<typeof SegmentedControl>;
 
 export default meta;

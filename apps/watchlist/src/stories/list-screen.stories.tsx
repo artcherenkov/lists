@@ -46,9 +46,6 @@ const meta = {
   component: ListScreenDemo,
   args: { records: SAMPLE_ITEMS, emptyText: "Пока пусто" },
   argTypes: { records: { control: false }, initialFilters: { control: false } },
-  // Автодокументации нет: экран на всю страницу, а кнопка «+» выходит порталом и вставала бы
-  // поверх документации.
-  tags: ["!autodocs"],
 } satisfies Meta<typeof ListScreenDemo>;
 
 export default meta;
