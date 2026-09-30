@@ -139,17 +139,18 @@ export function ItemSheet({
       {/* pb-4 — иначе скроллер шторки срезает тень нижнего поля. */}
       <div className="grid gap-4 pt-2 pb-4">
         {/* Выбранное из каталога показываем, а не переспрашиваем: заменить его нельзя,
-            это была бы другая запись. */}
+            это была бы другая запись. Рамка скруглена, как поля ниже; постер – меньше рамки,
+            но не до нуля, как дало бы строгое вложение при отступе 12 px. */}
         {!item.manual && (
-          <div className="flex items-center gap-4 rounded-xl border p-3">
+          <div className="flex items-center gap-4 rounded-md border p-3">
             {item.posterUrl ? (
               <img
                 src={item.posterUrl}
                 alt=""
-                className="h-32 w-22 shrink-0 rounded-lg object-cover"
+                className="h-32 w-22 shrink-0 rounded-sm object-cover"
               />
             ) : (
-              <div className="h-32 w-22 shrink-0 rounded-lg bg-muted" />
+              <div className="h-32 w-22 shrink-0 rounded-sm bg-muted" />
             )}
             <span className="min-w-0 flex-1">
               <span className="block text-2xl leading-tight font-semibold text-balance">
