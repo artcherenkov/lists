@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- viewport-fit=cover: без него Safari 26 рисует сплошную полосу-заглушку в зазоре
+         между контентом и стеклянными контролами и тонирует её сам; с ним контент и
+         fixed-элементы протягиваются под стекло, низ закрывает сама шторка. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Вотчлист</title>
+  </head>
+  <body>
+    <!-- Метка для @cherenkov/sheet: эту обёртку она уводит вглубь, пока открыта шторка.
+         min-h-dvh обязателен: под ней чёрный body, и без полной высоты он проступает снизу.
+         will-change-transform держит композитный слой тёплым: без него WebKit создаёт
+         слой в момент открытия и на глубокой прокрутке кадр мелькает канвасом,
+         пока тайлы не растеризованы. Цена: fixed-элементы внутри обёртки
+         позиционируются от неё всегда — выносить порталом (плюсик, тостер). -->
+    <div id="root" data-sheet-wrapper class="min-h-dvh bg-background will-change-transform"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

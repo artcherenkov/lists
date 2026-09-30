@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "vitest"],
+  "categories": { "correctness": "error" },
+  "rules": {
+    "vitest/no-disabled-tests": "error",
+    "vitest/no-focused-tests": "error",
+    "vitest/no-conditional-expect": "off"
+  },
+  "overrides": [
+    {
+      "files": ["apps/*/src/**", "packages/*/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../**/src/**", "../**/src"],
+                "message": "Другой пакет подключай по имени и exports, а не относительным путём"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/**", "coverage/**"]
+}

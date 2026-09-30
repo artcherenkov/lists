@@ -63,9 +63,9 @@
 
 ## Окружение
 
-- Node.js 24.16.0, pnpm 11.24.0 – как в текущих приложениях. Команды запуска и проверок
-  появятся вместе с каркасом – запиши их сюда. Настройки pnpm – в `pnpm-workspace.yaml`:
-  `.npmrc` – защищённый файл, его запись auto mode сам не одобрит.
+- Node.js 24.16.0, pnpm 12.3.4 (версия – в `packageManager` корневого `package.json`),
+  TypeScript 7 с нативным `tsc` – как в `../abc/cloud`. Настройки pnpm – в
+  `pnpm-workspace.yaml`: `.npmrc` – защищённый файл, его запись auto mode сам не одобрит.
 - Docker – colima: 2 CPU и 2 ГБ, контейнеры `pm-trial` уже занимают около 850 МБ.
   Стек разработки – compose-проект `lists`, порты только на `127.0.0.1`; на Mac заняты
   3100, 3200, 5000, 7000, 9222, 30000, 30001 и 63342. Контейнеры `pm-trial` хранят данные
@@ -81,6 +81,35 @@
 - Текущие приложения – образец для паритета, их не меняй: `../watchlist` (ветка
   `feat/series-updates` в worktree `../watchlist/.claude/worktrees/series-updates`,
   на сервере – образ `1dbb533`) и `../readlist` (`master`).
+
+## Команды
+
+- `pnpm install` – зависимости. Новые ставит только `pnpm add` (`-w` для корня,
+  `--filter <пакет>` для пакета): `package.json` и `pnpm-lock.yaml` руками не правим.
+- `pnpm dev` – Watchlist на `http://localhost:5175`.
+- `pnpm check` – все проверки: `fmt:check`, `lint`, `check-types`, unit и e2e. Перед push
+  хук `.husky/pre-push` гоняет быстрые – без e2e.
+- `pnpm test:unit` – Vitest. `pnpm test:e2e` – сборка приложения и Playwright на ней.
+  Перед написанием тестов прочитай [docs/testing.md](docs/testing.md).
+- `pnpm fmt` – форматирование oxfmt. Из него исключены сгенерированное
+  (`packages/ui/src/components/ui/**`, `pnpm-lock.yaml`) и файлы, которые ведёт оркестратор
+  вручную: `docs/plan.md`, `docs/milestones/**`, `.claude/**`.
+- Компоненты shadcn добавляет только CLI, одной командой из `apps/watchlist`:
+  `pnpm dlx shadcn@4.21.0 add <имя>`. Файлы лягут в `packages/ui/src/components/ui`; сравнить
+  с реестром – `add <имя> --diff`. У `popover`, `tabs` и `label` он может показать расхождение
+  только в строке `"use client"` (при проверке – у `popover`): CLI 4.21.0 непоследователен с этой
+  строкой, это не ручная правка.
+  Из корня CLI не запускай.
+- Генерируемое руками не правим: зависимости – `pnpm add`, компоненты – CLI shadcn.
+  Отличия от сгенерированного делаем классами в месте использования, обёртками
+  в `packages/ui/src/components` и токенами в `packages/ui/src/styles.css`.
+- Направление зависимостей держит механика. Импорт другого пакета по имени падает
+  в `pnpm check-types`, если пакета нет в `dependencies` (`packages/*` не зависят от
+  `apps/*`), а доступно только то, что он отдаёт через `exports`. Обход относительным путём
+  (`../../ui/src/...`) ловит правило `no-restricted-imports` в `.oxlintrc.json`: в `src`
+  пакетов и приложений запрещён относительный импорт с сегментом `src` после `../`. Правило
+  не видит обход без `src` (например, `../../ui/package.json`), а `tests/` и конфиги вне `src`
+  не проверяет – это остаётся на ревью.
 
 ## Серверы
 

@@ -1,0 +1,12 @@
+# Перед push – быстрые проверки. e2e здесь нет: они идут дольше, их запускают руками (pnpm test:e2e).
+# Проверки видят рабочую копию, а не отправляемые коммиты: незакоммиченные правки в них попадут.
+
+if ! command -v pnpm >/dev/null; then
+  echo "Push не выполнен: хук не нашёл pnpm. GUI-клиент git мог запуститься без PATH оболочки: сделай push из терминала." >&2
+  exit 1
+fi
+
+if ! { pnpm fmt:check && pnpm lint && pnpm check-types && pnpm test:unit; }; then
+  echo "Push не выполнен: упала проверка, вывод выше. Формат чинит pnpm fmt." >&2
+  exit 1
+fi

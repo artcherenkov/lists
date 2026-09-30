@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "sortImports": {
+    "groups": [
+      "type-import",
+      ["value-builtin", "value-external"],
+      "value-internal",
+      ["value-parent", "value-sibling", "value-index"],
+      "unknown"
+    ]
+  },
+  "overrides": [{ "files": ["**/*.md"], "options": { "proseWrap": "preserve" } }],
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "pnpm-lock.yaml",
+    "packages/ui/src/components/ui/**",
+    "packages/sheet/README.md",
+    ".claude/**",
+    "docs/plan.md",
+    "docs/milestones/**"
+  ]
+}
