@@ -230,7 +230,7 @@ test("свайп вниз по пункту списка статусов не �
 }) => {
   await page.goto("/");
   const card = page.getByRole("dialog", { name: "Изменить" });
-  const panel = card.locator(":scope > div").last();
+  const panel = card.getByTestId("sheet-panel");
   await page.getByRole("button", { name: /Ночной экспресс/ }).click();
   await statusSelect(page).hover({ trial: true });
   await statusSelect(page).click();

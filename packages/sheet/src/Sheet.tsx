@@ -436,6 +436,7 @@ export function Sheet({
       )}
       <div
         ref={panelRef}
+        data-testid="sheet-panel"
         style={{
           position: "absolute",
           left: 0,
