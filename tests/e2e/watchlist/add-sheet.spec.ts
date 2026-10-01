@@ -65,12 +65,12 @@ test("запись без варианта в поиске заводится р
     await page.getByRole("textbox", { name: "Поиск" }).fill("Неведомое кино");
     await sheet.getByRole("button", { name: /Неведомое кино.*Добавить вручную/ }).click();
 
-    await expect(sheet.getByLabel("Название")).toHaveValue("Неведомое кино");
+    await expect(sheet.getByLabel("Название", { exact: true })).toHaveValue("Неведомое кино");
     await expect(sheet.getByRole("radio", { name: "Фильм" })).toBeChecked();
   });
 
   await test.step("название и тип правятся, «Добавить» заводит запись", async () => {
-    await sheet.getByLabel("Название").fill("Неведомый сериал");
+    await sheet.getByLabel("Название", { exact: true }).fill("Неведомый сериал");
     await sheet.getByText("Сериал", { exact: true }).click();
     await sheet.getByRole("button", { name: "Добавить" }).click();
 
@@ -111,14 +111,14 @@ test("поиск стартует через 300 мс после последн�
     await clock.advance(200);
     await search.fill("Звёздный");
 
-    await expect(sheet.getByText("Ищу…")).toBeVisible();
+    await expect(sheet.getByText("Ищу…", { exact: true })).toBeVisible();
     await expect(sheet.getByRole("button", { name: /Звёздный ветер/ })).toHaveCount(0);
   });
 
   await test.step("через 400 мс после второй правки запрос ушёл, но ответа ещё нет", async () => {
     await clock.advance(400);
 
-    await expect(sheet.getByText("Ищу…")).toBeVisible();
+    await expect(sheet.getByText("Ищу…", { exact: true })).toBeVisible();
     await expect(sheet.getByRole("button", { name: /Звёздный ветер/ })).toHaveCount(0);
   });
 
@@ -126,7 +126,7 @@ test("поиск стартует через 300 мс после последн�
     await clock.advance(200);
 
     await expect(sheet.getByRole("button", { name: /Звёздный ветер/ })).toBeVisible();
-    await expect(sheet.getByText("Ищу…")).toHaveCount(0);
+    await expect(sheet.getByText("Ищу…", { exact: true })).toHaveCount(0);
   });
 });
 
@@ -142,7 +142,7 @@ test("один символ поиска не запускает, а прежн�
     await search.fill("З");
     await clock.advance(1000);
 
-    await expect(sheet.getByText("Ищу…")).toHaveCount(0);
+    await expect(sheet.getByText("Ищу…", { exact: true })).toHaveCount(0);
     await expect(sheet.getByRole("button", { name: /Добавить вручную/ })).toHaveCount(0);
   });
 
@@ -154,7 +154,7 @@ test("один символ поиска не запускает, а прежн�
     await search.fill("З");
     await search.fill("Го");
 
-    await expect(sheet.getByText("Ищу…")).toBeVisible();
+    await expect(sheet.getByText("Ищу…", { exact: true })).toBeVisible();
     await expect(sheet.getByRole("button", { name: /Звёздный ветер/ })).toHaveCount(0);
   });
 });

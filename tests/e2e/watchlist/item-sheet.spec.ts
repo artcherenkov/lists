@@ -19,8 +19,8 @@ test("карточка открывается по плитке, смена ст
   await test.step("плитка открывает карточку с постером, типом и статусом записи", async () => {
     await page.getByRole("button", { name: /Ночной экспресс/ }).click();
 
-    await expect(card.getByText("Ночной экспресс")).toBeVisible();
-    await expect(card.getByText("Фильм · 2023")).toBeVisible();
+    await expect(card.getByText("Ночной экспресс", { exact: true })).toBeVisible();
+    await expect(card.getByText("Фильм · 2023", { exact: true })).toBeVisible();
     await expect(statusSelect(page)).toContainText("Хочу");
   });
 
@@ -57,7 +57,7 @@ test("у записи без каталога в карточке правятс
   await page.goto("/");
   const card = page.getByRole("dialog", { name: "Изменить" });
   await page.getByRole("button", { name: /Домашнее видео 1994/ }).click();
-  await expect(card.getByLabel("Название")).toHaveValue("Домашнее видео 1994");
+  await expect(card.getByLabel("Название", { exact: true })).toHaveValue("Домашнее видео 1994");
 
   await test.step("тип уходит сразу, по клику", async () => {
     await card.getByText("Сериал", { exact: true }).click();
@@ -68,7 +68,7 @@ test("у записи без каталога в карточке правятс
   });
 
   await test.step("«Готово» сразу после правки названия не теряет его", async () => {
-    await card.getByLabel("Название").fill("Семейный архив");
+    await card.getByLabel("Название", { exact: true }).fill("Семейный архив");
     await card.getByRole("button", { name: "Готово" }).click();
 
     await expect(card).toBeHidden();
@@ -92,7 +92,7 @@ test("«Удалить» закрывает карточку, тост с «От
   });
 
   await test.step("«Отменить» в тосте возвращает запись на место", async () => {
-    await expect(page.getByText("«Ночной экспресс» удалён")).toBeVisible();
+    await expect(page.getByText("«Ночной экспресс» удалён", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Отменить" }).click();
 
     await expect(tile).toBeVisible();
@@ -112,7 +112,7 @@ test("«Удалить» отбрасывает ещё не отданное н�
   // Пробное нажатие ждёт, пока шторка доедет вверх: иначе пауза до обычного `click` дольше
   // 400 мс, и название уходит само, ещё до «Удалить».
   await card.getByRole("button", { name: "Удалить" }).click({ trial: true });
-  await card.getByLabel("Название").fill("Правка перед удалением");
+  await card.getByLabel("Название", { exact: true }).fill("Правка перед удалением");
 
   await card.getByRole("button", { name: "Удалить" }).dispatchEvent("click");
   await card.getByRole("button", { name: "Готово" }).dispatchEvent("click");
@@ -132,7 +132,7 @@ test("название ручной записи уходит само чере�
   await page.goto("/");
   const card = page.getByRole("dialog", { name: "Изменить" });
   await page.getByRole("button", { name: /Домашнее видео 1994/ }).click();
-  const title = card.getByLabel("Название");
+  const title = card.getByLabel("Название", { exact: true });
   await expect(title).toBeVisible();
   await clock.freeze();
   const main = page.getByRole("main");
@@ -158,7 +158,7 @@ test("свайп вниз закрывает карточку и досылае�
   await page.goto("/");
   const card = page.getByRole("dialog", { name: "Изменить" });
   await page.getByRole("button", { name: /Домашнее видео 1994/ }).click();
-  const title = card.getByLabel("Название");
+  const title = card.getByLabel("Название", { exact: true });
   await expect(title).toBeVisible();
   await clock.freeze();
   await title.fill("Правка перед свайпом");

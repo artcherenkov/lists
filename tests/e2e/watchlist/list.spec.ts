@@ -65,7 +65,7 @@ test("пустая вкладка показывает «Пока пусто»",
     await expect(card).toBeHidden();
   });
 
-  await expect(page.getByText("Пока пусто")).toBeVisible();
+  await expect(page.getByText("Пока пусто", { exact: true })).toBeVisible();
   await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(0);
 });
 
