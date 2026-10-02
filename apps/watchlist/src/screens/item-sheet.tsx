@@ -1,6 +1,5 @@
 import type { ChoiceOption } from "@lists/ui/components/segmented-control";
 
-import { Sheet } from "@lists/sheet";
 import { SegmentedControl } from "@lists/ui/components/segmented-control";
 import { Button } from "@lists/ui/components/ui/button";
 import { Input } from "@lists/ui/components/ui/input";
@@ -16,11 +15,10 @@ import {
 import { Trash2Icon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { AppSheet } from "./app-sheet.tsx";
 import { useClosingSheet } from "./use-closing-sheet.ts";
 
 const inputClass = "h-11 text-base";
-
-const CLOSE_THRESHOLD = 0.4;
 
 const TITLE_DEBOUNCE_MS = 400;
 
@@ -99,14 +97,11 @@ export function ItemSheet({
   useEffect(() => () => clearTimeout(titleTimer.current), []);
 
   return (
-    <Sheet
+    <AppSheet
       open={open}
       onClose={closeWithTitle}
       onClosed={onClosed}
       title="Изменить"
-      hideTitle
-      closeFraction={CLOSE_THRESHOLD}
-      scaleBackground
       footer={
         <div className="flex items-center gap-2 pt-4 pb-3">
           <Button type="button" variant="ghost" className="h-11" onClick={deleteItem}>
@@ -203,6 +198,6 @@ export function ItemSheet({
           </div>
         )}
       </div>
-    </Sheet>
+    </AppSheet>
   );
 }

@@ -1,7 +1,7 @@
 import type { ChoiceOption } from "@lists/ui/components/segmented-control";
 import type { ReactNode } from "react";
 
-import { Sheet, openSheetWithAutofocus } from "@lists/sheet";
+import { openSheetWithAutofocus } from "@lists/sheet";
 import { SegmentedControl } from "@lists/ui/components/segmented-control";
 import { Button } from "@lists/ui/components/ui/button";
 import { Input } from "@lists/ui/components/ui/input";
@@ -9,11 +9,10 @@ import { Label } from "@lists/ui/components/ui/label";
 import { SearchIcon } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
+import { AppSheet } from "./app-sheet.tsx";
 import { useClosingSheet } from "./use-closing-sheet.ts";
 
 const inputClass = "h-11 text-base";
-
-const CLOSE_THRESHOLD = 0.4;
 
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
@@ -131,14 +130,11 @@ export function AddSheet<T extends SearchResultView>({
   }
 
   return (
-    <Sheet
+    <AppSheet
       open={open}
       onClose={close}
       onClosed={onClosed}
       title="Добавить"
-      hideTitle
-      closeFraction={CLOSE_THRESHOLD}
-      scaleBackground
       header={
         manual ? undefined : (
           <div className="relative pt-2 pb-2">
@@ -224,7 +220,7 @@ export function AddSheet<T extends SearchResultView>({
           />
         </div>
       )}
-    </Sheet>
+    </AppSheet>
   );
 }
 
