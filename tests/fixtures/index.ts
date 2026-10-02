@@ -9,6 +9,8 @@ import { installPageClock } from "./clock.ts";
 import { startAppServer, startSwitchableAppServer } from "./server.ts";
 
 export { expect };
+export { openProfile, VERSION_FORMAT } from "./profile.ts";
+export { waitForServiceWorker } from "./service-worker.ts";
 export { centerOf, fingerTap, swipeDown } from "./swipe.ts";
 export { returnToApp } from "./visibility.ts";
 

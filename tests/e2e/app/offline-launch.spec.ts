@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "../../fixtures/index.ts";
+import { expect, test, waitForServiceWorker } from "../../fixtures/index.ts";
 
 test.use({ serviceWorkers: "allow" });
 
@@ -13,7 +13,7 @@ test("после первого открытия приложение запус
   await test.step("первое открытие в сети: worker скачал сборку целиком", async () => {
     await page.goto("/");
     await expect(heading(page)).toBeVisible();
-    await page.evaluate(() => navigator.serviceWorker.ready);
+    await waitForServiceWorker(page);
   });
 
   await context.setOffline(true);
@@ -39,7 +39,7 @@ test("без сети адрес вне сборки открывает прил
 }) => {
   await page.goto("/");
   await expect(heading(page)).toBeVisible();
-  await page.evaluate(() => navigator.serviceWorker.ready);
+  await waitForServiceWorker(page);
   await context.setOffline(true);
 
   await page.goto("/lists/42");

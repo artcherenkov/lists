@@ -1,7 +1,14 @@
 import type { SwitchableServer } from "../../fixtures/switchable-server.ts";
 import type { Page } from "@playwright/test";
 
-import { expect, returnToApp, testWithOwnServer as test } from "../../fixtures/index.ts";
+import {
+  expect,
+  openProfile,
+  returnToApp,
+  testWithOwnServer as test,
+  VERSION_FORMAT,
+  waitForServiceWorker,
+} from "../../fixtures/index.ts";
 
 test.use({ serviceWorkers: "allow" });
 
@@ -14,8 +21,6 @@ const newVersionButton = (page: Page) =>
     exact: true,
   });
 
-const waitForPrecache = (page: Page) => page.evaluate(() => navigator.serviceWorker.ready);
-
 /**
  * Первая сборка открыта, worker скачал её и управляет страницей. После перезагрузки управляемой
  * страницы Chromium сам запрашивает `sw.js` через пару секунд, и если сервер к этому моменту уже
@@ -24,18 +29,16 @@ const waitForPrecache = (page: Page) => page.evaluate(() => navigator.serviceWor
  */
 async function openFirstBuildUnderWorker(page: Page, ownServer: SwitchableServer) {
   await page.goto("/");
-  await waitForPrecache(page);
+  await waitForServiceWorker(page);
   const browserCheck = ownServer.waitUntilServed("/sw.js");
   await page.reload();
   expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   await browserCheck;
 }
 
-async function expectVersion(page: Page, version: string) {
-  await page.getByRole("button", { name: "Профиль" }).click();
-  await expect(page.getByRole("dialog", { name: "Профиль" }).getByRole("definition")).toHaveText(
-    version,
-  );
+async function expectVersion(page: Page, expected: string) {
+  const { version } = await openProfile(page);
+  await expect(version).toHaveText(expected);
 }
 
 test("при возвращении на экран приложение находит новую версию и предлагает обновиться", async ({
@@ -98,7 +101,7 @@ test("«Обновить» в сеансе первого открытия пе�
   ownServer,
 }) => {
   await page.goto("/");
-  await waitForPrecache(page);
+  await waitForServiceWorker(page);
   expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
   await ownServer.switchToNextBuild();
   await returnToApp(page);
@@ -130,9 +133,8 @@ test("«Обновить», когда новая версия не включи
 
   await page.waitForFunction(() => !("isOldPage" in window), undefined, { timeout: 10_000 });
   await expect(newVersionButton(page)).toBeVisible();
-  await page.getByRole("button", { name: "Профиль" }).click();
-  const version = page.getByRole("dialog", { name: "Профиль" }).getByRole("definition");
-  await expect(version).toHaveText(/^\d{4}-\d{2}-\d{2} · [0-9a-f]{7}( · .+)?$/);
+  const { version } = await openProfile(page);
+  await expect(version).toHaveText(VERSION_FORMAT);
   await expect(version).not.toHaveText(NEXT_VERSION);
 });
 
