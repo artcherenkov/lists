@@ -254,7 +254,7 @@ describe("сайт не ответил", () => {
     const error = await activateRelease(input()).catch((e) => e);
 
     expect(error.name).toBe("SiteUnverifiedError");
-    expect(error.message).toContain("не откатывался");
+    expect(error.message).toContain("возврата на прежний релиз не было");
     expect(error.message).toContain(`pnpm deploy:v2 ${B}`);
     expect(switches(calls)).toHaveLength(1);
   });

@@ -63,6 +63,41 @@ export function planReturn(
 }
 
 /**
+ * Откат: `current` и `previous` меняются местами, включается релиз, который был `previous`. Отказ,
+ * если `previous` нет, если он совпадает с `current` (так бывает после обрыва между переключением
+ * `previous` и `current`: обмен местами молча ничего бы не сделал) или его каталога нет на сервере.
+ * Отдаёт план в том же виде, что `planDeploy`: проверка и возврат при неудаче общие с выкладкой.
+ */
+export function planRollback(input: { state: PointerState; previousOnServer: boolean }): {
+  release: string;
+  plan: DeployPlan;
+} {
+  const { state, previousOnServer } = input;
+  if (state.previous === null) {
+    throw new Error("Откатывать некуда: прежнего релиза (previous) нет.");
+  }
+  if (state.previous === state.current) {
+    throw new Error(
+      `Откат невозможен: previous совпадает с current (${state.current}). Так бывает после обрыва между переключением указателей: проверь их на сервере.`,
+    );
+  }
+  if (!previousOnServer) {
+    throw new Error(
+      `Откатывать некуда: каталога прежнего релиза ${state.previous} нет на сервере.`,
+    );
+  }
+  return {
+    release: state.previous,
+    plan: {
+      deliver: false,
+      switchPointers: true,
+      recordActivation: true,
+      next: { current: state.previous, previous: state.current },
+    },
+  };
+}
+
+/**
  * Разбирает вывод `readlink` для двух ссылок: строки `current=releases/<хеш>` и
  * `previous=releases/<хеш>`, у отсутствующей ссылки значение пустое. Неожиданную цель не угадываем:
  * продолжение с неверным состоянием перезаписало бы указатели.

@@ -16,7 +16,8 @@
     "test:unit": "vitest run",
     "test:e2e": "turbo build build:next --output-logs=errors-only && playwright test",
     "prepare": "husky || true",
-    "deploy:v2": "node deploy/command/index.ts"
+    "deploy:v2": "node deploy/command/index.ts",
+    "rollback:v2": "node deploy/command/rollback-cli.ts"
   },
   "devDependencies": {
     "@playwright/test": "~1.63.0",

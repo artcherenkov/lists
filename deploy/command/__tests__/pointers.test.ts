@@ -5,6 +5,7 @@ import {
   parsePointerState,
   planDeploy,
   planReturn,
+  planRollback,
   pointersAfterDeploy,
 } from "../pointers.ts";
 
@@ -112,6 +113,45 @@ describe("возврат после неудачной выкладки", () => 
 
   it("первая выкладка: возвращаться некуда", () => {
     expect(planReturn({ current: null, previous: null })).toBeNull();
+  });
+});
+
+describe("откат", () => {
+  it("включается previous, текущий становится previous: указатели меняются местами, строка журнала нужна", () => {
+    expect(planRollback({ state: { current: A, previous: B }, previousOnServer: true })).toEqual({
+      release: B,
+      plan: {
+        deliver: false,
+        switchPointers: true,
+        recordActivation: true,
+        next: { current: B, previous: A },
+      },
+    });
+  });
+
+  it("повторный откат возвращает первый: указатели снова меняются местами", () => {
+    const first = planRollback({ state: { current: A, previous: B }, previousOnServer: true });
+    const second = planRollback({ state: first.plan.next, previousOnServer: true });
+
+    expect(second.plan.next).toEqual({ current: A, previous: B });
+  });
+
+  it("previous нет – отказ", () => {
+    expect(() =>
+      planRollback({ state: { current: A, previous: null }, previousOnServer: false }),
+    ).toThrow("прежнего релиза (previous) нет");
+  });
+
+  it("previous совпадает с current – отказ: обмен местами молча ничего не сделал бы", () => {
+    expect(() =>
+      planRollback({ state: { current: A, previous: A }, previousOnServer: true }),
+    ).toThrow(/previous совпадает с current/);
+  });
+
+  it("каталога previous нет на сервере – отказ с его хешем", () => {
+    expect(() =>
+      planRollback({ state: { current: A, previous: B }, previousOnServer: false }),
+    ).toThrow(`каталога прежнего релиза ${B} нет на сервере`);
   });
 });
 
