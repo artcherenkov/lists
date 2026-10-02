@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 
 import { caddyImageFromComposeConfig } from "./compose-config.ts";
 import { REMOTE_ROOT, SSH_HOST } from "./config.ts";
+import { stopReason, stopReasonOfAbort } from "./errors.ts";
 import { run } from "./exec.ts";
 import { assertCommitHash, parsePointerState, type PointerState } from "./pointers.ts";
 import { createStepRunner, inspectStateCommand, type ExecuteOnServer } from "./steps.ts";
@@ -152,7 +153,10 @@ export async function acquireLock(
         if (!releasing) lostController.abort(new LockLostError());
         return;
       }
-      if (code === LOCK_BUSY_EXIT_CODE) {
+      const reason = stopReason(stop);
+      if (reason !== undefined) {
+        reject(reason);
+      } else if (code === LOCK_BUSY_EXIT_CODE) {
         reject(new LockBusyError(stdout.replace(/^BUSY\n/, "").trim()));
       } else {
         reject(
@@ -281,7 +285,7 @@ function packDirectory(dir: string, signal: AbortSignal): Promise<Buffer> {
     let stderr = "";
     tar.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
     tar.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
-    tar.once("error", reject);
+    tar.once("error", (error) => reject(stopReasonOfAbort(error, signal) ?? error));
     tar.once("close", (code) =>
       code === 0
         ? resolve(Buffer.concat(chunks))

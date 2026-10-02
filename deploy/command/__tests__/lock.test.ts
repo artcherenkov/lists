@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
+import { StoppedError } from "../cancellation.ts";
 import { LockBusyError, LockLostError, acquireLock, type SpawnLockHolder } from "../remote.ts";
 
 /** Держатель вместо `ssh`: локальная оболочка, которая играет роль сервера. */
@@ -46,7 +47,18 @@ describe("блокировка на сервере", () => {
     await lock.release();
   });
 
-  it("остановка до получения блокировки закрывает держателя и даёт отказ", async () => {
+  it("остановка до получения блокировки закрывает держателя, а заголовок ошибки – причина остановки", async () => {
+    const stop = new AbortController();
+    const acquiring = acquireLock(OWNER, stop.signal, holder("sleep 5"));
+
+    stop.abort(new StoppedError());
+
+    const error = await acquiring.catch((e) => e);
+    expect(error).toBeInstanceOf(StoppedError);
+    expect(error.message).not.toContain("Не удалось взять блокировку");
+  });
+
+  it("остановка без причины не подменяет отказ: держатель закрыт, ошибка с кодом", async () => {
     const stop = new AbortController();
     const acquiring = acquireLock(OWNER, stop.signal, holder("sleep 5"));
 

@@ -1,5 +1,7 @@
+import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
 
+import { StoppedError } from "../cancellation.ts";
 import { createRemote } from "../remote.ts";
 
 const A = "a".repeat(40);
@@ -48,5 +50,15 @@ describe("шаги выкладки на сервере", () => {
     const [withLog, withoutLog] = execute.mock.calls.map(([script]) => script);
     expect(withLog).toContain(`${B} >> /opt/lists/releases.log`);
     expect(withoutLog).not.toContain("releases.log");
+  });
+
+  it("остановка при упаковке архива – ошибка называет причину остановки, а не «The operation was aborted»", async () => {
+    const { stop, execute, remote } = setup();
+    stop.abort(new StoppedError());
+
+    const error = await remote.deliver(A, tmpdir()).catch((e) => e);
+
+    expect(error).toBeInstanceOf(StoppedError);
+    expect(execute).not.toHaveBeenCalled();
   });
 });

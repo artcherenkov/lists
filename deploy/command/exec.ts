@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 
+import { stopReasonOfAbort } from "./errors.ts";
+
 export interface RunOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
@@ -51,12 +53,8 @@ export function run(
     child.stdin.end(options.input);
 
     child.once("error", (error) => {
-      // Остановку с заданной причиной (потеря блокировки, Ctrl+C) отдаём как есть: она главнее
-      // сообщения «команда прервана».
-      const reason: unknown = options.signal?.reason;
-      if (error.name === "AbortError" && reason instanceof Error && reason.name !== "AbortError") {
-        return reject(reason);
-      }
+      const reason = stopReasonOfAbort(error, options.signal);
+      if (reason !== undefined) return reject(reason);
       const description =
         error.name === "AbortError" ? `${command}: прервано` : `${command}: не удалось запустить`;
       reject(new CommandError(description, stdout, stderr, { cause: error }));
