@@ -6,6 +6,7 @@
 
 - Компоненты shadcn добавляет только CLI, одной командой из `apps/watchlist`: `pnpm dlx shadcn@4.21.0 add <имя>`. Файлы лягут в `packages/ui/src/components/ui`; сравнить с реестром – `add <имя> --diff`. У части компонентов он может показать расхождение только в строке `"use client"` (при проверке – у `popover` и `sonner`): CLI 4.21.0 непоследователен с этой строкой, это не ручная правка. Из корня CLI не запускай.
 - Пресет меняет `pnpm dlx shadcn@4.21.0 apply <код> --yes` из `apps/watchlist`: он переписывает оба `components.json`, компоненты и тему в `packages/ui/src/styles.css`, а свои правила в конце файла оставляет. Созданный им `apps/watchlist/src/lib/utils.ts` удали: `cn` берётся из пакета `cn`. Компонент, который в новом стиле не изменился, он пропускает. Затем `pnpm fmt` и `add <имя> --diff` по всем компонентам. Если `apply` вернул `@import "@fontsource-variable/inter"` (он подключает все семь наборов шрифта) или убрал свои `@font-face` Inter, `pnpm test:e2e` упадёт на `tests/e2e/app/font.spec.ts`.
+- После смены пресета сверь цвета с токеном `--background` светлой и тёмной темы: два `<meta name="theme-color">` в `apps/watchlist/index.html` (светлая и тёмная тема) и `background_color` с `theme_color` манифеста в `apps/watchlist/vite.config.ts` (одно значение, светлая тема). Тесты их не проверяют.
 - Сгенерированные компоненты руками не правим: отличия делаем классами в месте использования, обёртками в `packages/ui/src/components` и токенами в `packages/ui/src/styles.css`.
 
 ## Storybook
