@@ -72,4 +72,39 @@ describe("шаги выкладки на сервере", () => {
     );
     expect(execute).not.toHaveBeenCalled();
   });
+
+  it("удаление релизов: один rm -rf на каталоги указанных хешей, без хешей – ни одной команды", async () => {
+    const { execute, remote } = setup();
+
+    await remote.removeReleases([]);
+    await remote.removeReleases([A, B]);
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(execute.mock.calls[0]![0]).toBe(
+      `rm -rf /opt/lists/releases/${A} /opt/lists/releases/${B}`,
+    );
+  });
+
+  it("удаление отказывается от имени не из хеша: путь в shell не уходит", async () => {
+    const { execute, remote } = setup();
+
+    await expect(remote.removeReleases(["../current"])).rejects.toThrow(/полный хеш/);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("список релизов – имена из вывода ls, пустые строки отброшены", async () => {
+    const { execute, remote } = setup();
+    execute.mockResolvedValueOnce(`${A}\nbackup\n\n${B}\n`);
+
+    expect(await remote.listReleases()).toEqual([A, "backup", B]);
+    expect(execute.mock.calls[0]![0]).toBe("ls -1 /opt/lists/releases");
+  });
+
+  it("журнал читается целиком, ошибка чтения не глушится", async () => {
+    const { execute, remote } = setup();
+    execute.mockResolvedValueOnce("строка\n");
+
+    expect(await remote.readReleaseLog()).toBe("строка\n");
+    expect(execute.mock.calls[0]![0]).toBe("cat /opt/lists/releases.log");
+  });
 });

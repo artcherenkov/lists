@@ -22,8 +22,12 @@ export interface DeployPlan {
   next: PointerState;
 }
 
+export function isCommitHash(value: string): boolean {
+  return COMMIT_HASH.test(value);
+}
+
 export function assertCommitHash(value: string): void {
-  if (!COMMIT_HASH.test(value)) {
+  if (!isCommitHash(value)) {
     throw new Error(`Ожидался полный хеш коммита из 40 знаков, получено: ${value}`);
   }
 }
@@ -119,7 +123,7 @@ function releaseFromTarget(name: string, values: Map<string, string>): string | 
   if (target === undefined) throw new Error(`В выводе состояния нет ссылки ${name}`);
   if (target === "") return null;
   const hash = target.replace(/^releases\//, "");
-  if (hash === target || !COMMIT_HASH.test(hash)) {
+  if (hash === target || !isCommitHash(hash)) {
     throw new Error(`Ссылка ${name} ведёт не на релиз: ${target}`);
   }
   return hash;

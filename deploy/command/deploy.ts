@@ -4,6 +4,7 @@ import type { DeployLock, Remote } from "./remote.ts";
 import { fileURLToPath } from "node:url";
 
 import { withBuiltRelease } from "./build.ts";
+import { cleanOldReleases } from "./cleanup.ts";
 import { SITE_URL } from "./config.ts";
 import { assertReleaseFilesInCommit, resolveCommit, workingTreeStatus } from "./git.ts";
 import { detail, step, warn } from "./log.ts";
@@ -39,9 +40,10 @@ export async function deploy(revision: string, cancel: Cancellation): Promise<vo
 /** Зависимости, которые подменяют в тестах. */
 export interface DeployDeps {
   switchAndVerify: typeof switchAndVerify;
+  cleanOldReleases: typeof cleanOldReleases;
 }
 
-const realDeps: DeployDeps = { switchAndVerify };
+const realDeps: DeployDeps = { switchAndVerify, cleanOldReleases };
 
 export interface DeployUnderLockInput {
   commit: string;
@@ -56,7 +58,8 @@ export interface DeployUnderLockInput {
 
 /**
  * Порядок выкладки после взятия блокировки: указатели, доставка (если релиза нет на сервере),
- * включение с проверкой и возвратом при неудаче.
+ * включение с проверкой и возвратом при неудаче, очистка. Очистка идёт только после успешной
+ * проверки: после возврата и после «не удалось проверить» `switchAndVerify` бросает ошибку.
  */
 export async function deployUnderLock(
   input: DeployUnderLockInput,
@@ -91,4 +94,22 @@ export async function deployUnderLock(
   });
   detail(`Файлов проверено: ${filesChecked}, заголовки, sw.js и /api/ в порядке`);
   step(`Готово: ${SITE_URL} отдаёт ${commit.slice(0, 7)}`);
+
+  step("Удаляю старые релизы");
+  try {
+    await deps.cleanOldReleases(remote);
+  } catch (error) {
+    throw new CleanupFailedError(commit, error);
+  }
+}
+
+/** Релиз выложен и проверен, не удалась только очистка: возвращать нечего. */
+export class CleanupFailedError extends Error {
+  constructor(commit: string, cause: unknown) {
+    super(
+      `Релиз ${commit.slice(0, 7)} выложен и проверен, сайт его отдаёт. Не удалась очистка старых релизов: она повторится при следующей выкладке.`,
+      { cause },
+    );
+    this.name = "CleanupFailedError";
+  }
 }

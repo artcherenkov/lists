@@ -14,7 +14,7 @@ import {
   type ExecuteOnServer,
   type StepOptions,
 } from "./steps.ts";
-import { buildSwitchScript } from "./switch-script.ts";
+import { RELEASES_LOG, buildSwitchScript } from "./switch-script.ts";
 
 /** Код выхода `flock`-обёртки, когда блокировка занята (`EX_TEMPFAIL`). */
 const LOCK_BUSY_EXIT_CODE = 75;
@@ -201,6 +201,22 @@ export function createRemote(cancel: Cancellation, execute: ExecuteOnServer = ex
         `test -d ${releaseDir(commit)} && echo yes || echo no`,
       );
       return answer.trim() === "yes";
+    },
+
+    /** Журнал включений целиком. Нет файла или ошибка чтения – ошибка шага: журнал после выкладки есть всегда. */
+    readReleaseLog(): Promise<string> {
+      return runStep("чтение журнала включений", `cat ${RELEASES_LOG}`);
+    },
+
+    /** Имена каталогов в `releases/`, по одному в строке. */
+    async listReleases(): Promise<string[]> {
+      const output = await runStep("список релизов", `ls -1 ${REMOTE_ROOT}/releases`);
+      return output.split("\n").filter((name) => name !== "");
+    },
+
+    async removeReleases(commits: string[]): Promise<void> {
+      if (commits.length === 0) return;
+      await runStep("удаление старых релизов", `rm -rf ${commits.map(releaseDir).join(" ")}`);
     },
 
     readChecksums(commit: string): Promise<string> {

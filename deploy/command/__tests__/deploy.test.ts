@@ -2,7 +2,7 @@ import type { Remote } from "../remote.ts";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { deployUnderLock, type DeployDeps } from "../deploy.ts";
+import { CleanupFailedError, deployUnderLock, type DeployDeps } from "../deploy.ts";
 
 const A = "a".repeat(40);
 const B = "b".repeat(40);
@@ -36,16 +36,20 @@ function setup(options: { current?: string | null; onServer?: boolean } = {}) {
     events.push("switch");
     return OK;
   });
+  const cleanOldReleases = vi.fn<DeployDeps["cleanOldReleases"]>(async () => {
+    events.push("cleanup");
+  });
   const run = (deps: Partial<DeployDeps> = {}) =>
     deployUnderLock(
       { commit: B, cancel, lock, operation, remote: remote as unknown as Remote, deliver },
-      { switchAndVerify, ...deps },
+      { switchAndVerify, cleanOldReleases, ...deps },
     );
   return {
     events,
     remote,
     deliver,
     switchAndVerify,
+    cleanOldReleases,
     cancel,
     lock,
     operation,
@@ -55,26 +59,26 @@ function setup(options: { current?: string | null; onServer?: boolean } = {}) {
 }
 
 describe("выкладка под блокировкой", () => {
-  it("нового релиза: сборка и доставка, затем включение с проверкой", async () => {
+  it("нового релиза: сборка и доставка, включение с проверкой, очистка – в этом порядке", async () => {
     const { events, deliver, remote, operation, run } = setup();
 
     await run();
 
-    expect(events).toEqual(["build", "deliver", "switch"]);
+    expect(events).toEqual(["build", "deliver", "switch", "cleanup"]);
     expect(remote.releaseExists).toHaveBeenCalledWith(B);
     expect(deliver.mock.calls[0]![0]).toBe(operation.stop);
     expect(remote.deliver).toHaveBeenCalledWith(B, "/tmp/release");
   });
 
-  it("релиз уже лежит на сервере: сборки нет, включение есть", async () => {
+  it("релиз уже лежит на сервере: сборки нет, включение и очистка есть", async () => {
     const { events, run } = setup({ onServer: true });
 
     await run();
 
-    expect(events).toEqual(["switch"]);
+    expect(events).toEqual(["switch", "cleanup"]);
   });
 
-  it("план и прежние указатели идут во включение: релиз уже текущий – указатели не меняются", async () => {
+  it("план и прежние указатели идут во включение: релиз уже текущий – указатели не меняются, очистка всё равно идёт", async () => {
     const { events, switchAndVerify, cancel, lock, remote, state, run } = setup({
       current: B,
       onServer: true,
@@ -85,7 +89,7 @@ describe("выкладка под блокировкой", () => {
     const input = switchAndVerify.mock.calls[0]![0];
     expect(input).toMatchObject({ commit: B, stateBefore: state, cancel, lock, remote });
     expect(input.plan.switchPointers).toBe(false);
-    expect(events).toEqual(["switch"]);
+    expect(events).toEqual(["switch", "cleanup"]);
   });
 
   it("включение получает блокировку и остановку как есть: потеря блокировки добавляется внутри, а не здесь", async () => {
@@ -96,5 +100,43 @@ describe("выкладка под блокировкой", () => {
     const input = switchAndVerify.mock.calls[0]![0];
     expect(input.lock).toBe(lock);
     expect(input.cancel).toBe(cancel);
+  });
+
+  it("очистка получает тот же сервер", async () => {
+    const { cleanOldReleases, remote, run } = setup();
+
+    await run();
+
+    expect(cleanOldReleases).toHaveBeenCalledWith(remote);
+  });
+
+  it("возврат или «не удалось проверить»: switchAndVerify бросил ошибку – очистки нет", async () => {
+    const { events, cleanOldReleases, run } = setup();
+
+    await expect(
+      run({
+        switchAndVerify: async () => {
+          throw new Error("возвращено");
+        },
+      }),
+    ).rejects.toThrow("возвращено");
+
+    expect(cleanOldReleases).not.toHaveBeenCalled();
+    expect(events).not.toContain("cleanup");
+  });
+
+  it("очистка упала: релиз выложен и проверен, очистка повторится, исходная причина в цепочке", async () => {
+    const { run } = setup();
+
+    const error = await run({
+      cleanOldReleases: async () => {
+        throw new Error("ssh оборвался");
+      },
+    }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(CleanupFailedError);
+    expect(error.message).toContain("выложен и проверен");
+    expect(error.message).toContain("повторится при следующей выкладке");
+    expect(error.cause.message).toBe("ssh оборвался");
   });
 });
