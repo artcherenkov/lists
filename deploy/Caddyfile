@@ -1,0 +1,30 @@
+v2.watchlist.acherenkov.com {
+	root * /srv/current/site
+	encode zstd gzip
+
+	header X-Robots-Tag "noindex"
+
+	log {
+		output stdout
+	}
+
+	handle /api/* {
+		respond 404
+	}
+
+	handle {
+		@revalidate not path /assets/*
+		request_header @revalidate -If-None-Match
+		request_header @revalidate -If-Modified-Since
+		header @revalidate {
+			Cache-Control "no-cache"
+			-ETag
+			-Last-Modified
+		}
+		header /assets/* {
+			Cache-Control "public, max-age=31536000, immutable"
+			match status 2xx
+		}
+		file_server
+	}
+}

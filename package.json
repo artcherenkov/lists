@@ -6,7 +6,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "test": "pnpm test:unit && pnpm test:e2e",
-    "check-types": "turbo check-types && tsc --project tsconfig.tests.json",
+    "check-types": "turbo check-types && tsc --project tsconfig.tests.json && tsc --project deploy/tsconfig.json",
     "storybook": "pnpm --filter watchlist storybook",
     "build-storybook": "turbo build-storybook",
     "check": "pnpm fmt:check && pnpm lint && pnpm check-types && pnpm build-storybook && pnpm test",
@@ -15,7 +15,8 @@
     "fmt:check": "oxfmt --check",
     "test:unit": "vitest run",
     "test:e2e": "turbo build build:next --output-logs=errors-only && playwright test",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "deploy:v2": "node deploy/command/index.ts"
   },
   "devDependencies": {
     "@playwright/test": "~1.63.0",
