@@ -9,6 +9,6 @@
     "allowImportingTsExtensions": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "vite.config.ts", ".storybook"],
+  "include": ["src", "build", "vite.config.ts", ".storybook"],
   "exclude": ["src/sw.ts"]
 }

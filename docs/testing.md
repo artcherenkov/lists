@@ -6,7 +6,7 @@
 
 ## Где что лежит
 
-- Unit: `apps/*/src/**/__tests__/*.test.ts(x)`, `packages/*/src/**/__tests__/*.test.ts(x)` и `tests/fixtures/**/__tests__/*.test.ts` – последние проверяют сами помощники тестов. Конфиг один – `vitest.config.ts` в корне.
+- Unit: `apps/*/src/**/__tests__/*.test.ts(x)`, `packages/*/src/**/__tests__/*.test.ts(x)` и `tests/fixtures/**/__tests__/*.test.ts` – последние проверяют сами помощники тестов. Вычисления конфига сборки проверяет `apps/*/build/**/__tests__/*.test.ts`: им нужен Node, поэтому они не в `src`, откуда код уходит в браузер. Конфиг один – `vitest.config.ts` в корне.
 - E2E: `tests/e2e/<область>/<имя>.spec.ts`. Конфиг один – `playwright.config.ts`. Устройство – Chromium с размерами и касаниями iPhone (393×852, `isMobile`, `hasTouch`, `deviceScaleFactor: 3`, язык `ru-RU`).
 - Кирпичики – `tests/fixtures`. Новый кирпичик добавляем туда же, отдельных наборов и конфигов не заводим: по набору тестов должно быть видно, что в нём настоящее, а что подменено.
 
@@ -58,5 +58,6 @@
 | `page`, `ownAddressesOnly` | `tests/e2e/app/launch.spec.ts` – приложение открывается, чужих запросов нет |
 | `page`, `context`, `serviceWorkers: "allow"` | `tests/e2e/app/offline-launch.spec.ts` – после первого открытия приложение запускается без сети |
 | `page`, `context`, `ownServer`, `clock`, `returnToApp` | `tests/e2e/app/update.spec.ts` – приложение находит новую версию, «Обновить» включает её, в том числе без сети |
+| unit, временный git-репозиторий | `apps/watchlist/build/__tests__/app-version.test.ts` – номер версии из git: дата, 7 знаков хеша, пометка «с правками» |
 | unit, переключаемый сервер | `tests/fixtures/__tests__/switchable-server.test.ts` – переключение сборки и полный ответ вместо `304` |
 | `page`, `clock` | `tests/e2e/watchlist/add-sheet.spec.ts` – поиск стартует через 300 мс после последней буквы |
