@@ -10,6 +10,16 @@
          метатега эти отступы перестанут работать. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Вотчлист</title>
+    <!-- Встроенный и синхронный: класс dark должен встать до первой отрисовки, а модуль
+         приложения выполняется позже. Если появится CSP, скрипт разрешают по хешу. -->
+    <script>
+      (() => {
+        const systemDark = matchMedia("(prefers-color-scheme: dark)");
+        const apply = () => document.documentElement.classList.toggle("dark", systemDark.matches);
+        apply();
+        systemDark.addEventListener("change", apply);
+      })();
+    </script>
   </head>
   <body>
     <!-- Метка для @lists/sheet: эту обёртку она уводит вглубь, пока открыта шторка.
