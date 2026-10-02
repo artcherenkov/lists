@@ -7,6 +7,7 @@ import { PlusIcon, UserIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { PosterCard, type PosterCardView } from "./poster-card.tsx";
+import { UpdateButton } from "./update-button.tsx";
 
 export function ListScreen({
   title,
@@ -19,6 +20,7 @@ export function ListScreen({
   onOpenItem,
   onAdd,
   onOpenProfile,
+  onUpdate,
 }: {
   title: string;
   tabs: readonly ChoiceOption[];
@@ -32,6 +34,8 @@ export function ListScreen({
   /** Синхронный: родитель открывает шторку через `openAddSheet` в стеке этого же клика. */
   onAdd: () => void;
   onOpenProfile: () => void;
+  /** Есть, когда новая версия скачана: тогда слева от «Добавить» показана кнопка обновления. */
+  onUpdate?: () => void;
 }) {
   return (
     <main className="mx-auto max-w-4xl px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
@@ -81,14 +85,17 @@ export function ListScreen({
 
       {/* Портал наружу из #root: причина – в комментарии к обёртке в index.html. */}
       {createPortal(
-        <Button
-          size="icon"
-          aria-label="Добавить"
-          onClick={onAdd}
-          className="fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-40 size-16 rounded-full border border-white/25 bg-primary/65 shadow-lg backdrop-blur-xl hover:bg-primary/75"
-        >
-          <PlusIcon className="size-7" />
-        </Button>,
+        <>
+          {onUpdate && <UpdateButton onUpdate={onUpdate} />}
+          <Button
+            size="icon"
+            aria-label="Добавить"
+            onClick={onAdd}
+            className="fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-40 size-16 rounded-full border border-white/25 bg-primary/65 shadow-lg backdrop-blur-xl hover:bg-primary/75"
+          >
+            <PlusIcon className="size-7" />
+          </Button>
+        </>,
         document.body,
       )}
     </main>

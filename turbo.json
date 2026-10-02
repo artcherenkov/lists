@@ -4,6 +4,7 @@
   "globalDependencies": ["tsconfig.base.json"],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "build:next": { "dependsOn": ["^build"], "outputs": ["dist-next/**"] },
     "build-storybook": { "dependsOn": ["^build"], "outputs": ["storybook-static/**"] },
     "check-types": { "dependsOn": ["^check-types"] },
     "dev": { "cache": false, "persistent": true }

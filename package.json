@@ -14,7 +14,7 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "test:unit": "vitest run",
-    "test:e2e": "turbo build --output-logs=errors-only && playwright test",
+    "test:e2e": "turbo build build:next --output-logs=errors-only && playwright test",
     "prepare": "husky || true"
   },
   "devDependencies": {

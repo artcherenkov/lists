@@ -13,6 +13,7 @@
   "overrides": [{ "files": ["**/*.md"], "options": { "proseWrap": "never" } }],
   "ignorePatterns": [
     "dist/**",
+    "dist-next/**",
     "coverage/**",
     "pnpm-lock.yaml",
     "packages/ui/src/components/ui/**",

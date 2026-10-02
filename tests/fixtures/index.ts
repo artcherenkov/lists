@@ -1,14 +1,16 @@
 import type { PageClock } from "./clock.ts";
 import type { AppServer } from "./server.ts";
+import type { SwitchableServer } from "./switchable-server.ts";
 
 import { test as base, expect } from "@playwright/test";
 
 import { isOwnAddress } from "./address.ts";
 import { installPageClock } from "./clock.ts";
-import { startAppServer } from "./server.ts";
+import { startAppServer, startSwitchableAppServer } from "./server.ts";
 
 export { expect };
 export { centerOf, fingerTap, swipeDown } from "./swipe.ts";
+export { returnToApp } from "./visibility.ts";
 
 type WorkerFixtures = { server: AppServer };
 type TestFixtures = { ownAddressesOnly: void; clock: PageClock };
@@ -45,4 +47,20 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { auto: true },
   ],
+});
+
+/**
+ * Тест со своим сервером: он отдаёт `dist`, а `switchToNextBuild` переключает его на `dist-next` на
+ * том же адресе. Остальным тестам хватает общего сервера воркера.
+ */
+export const testWithOwnServer = test.extend<{ ownServer: SwitchableServer }>({
+  // oxlint-disable-next-line no-empty-pattern -- так Playwright объявляет фикстуру без зависимостей
+  ownServer: async ({}, use) => {
+    const server = await startSwitchableAppServer();
+    await use(server);
+    await server.stop();
+  },
+  baseURL: async ({ ownServer }, use) => {
+    await use(ownServer.url);
+  },
 });

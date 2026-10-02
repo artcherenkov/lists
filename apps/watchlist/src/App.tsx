@@ -27,7 +27,7 @@ import { useServiceWorker } from "./use-service-worker.ts";
 
 // Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
 export function App() {
-  useServiceWorker();
+  const { isNewVersionReady, updateToNewVersion } = useServiceWorker();
   const list = useSampleList();
   const [tab, setTab] = useState(ALL_TAB);
   const [filters, setFilters] = useState<ListFiltersValue>(DEFAULT_FILTERS);
@@ -73,6 +73,7 @@ export function App() {
         onOpenItem={setOpenedId}
         onAdd={() => openAddSheet(() => setAdding(true))}
         onOpenProfile={() => setProfileOpen(true)}
+        onUpdate={isNewVersionReady ? updateToNewVersion : undefined}
       />
 
       {adding && (

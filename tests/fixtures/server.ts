@@ -4,6 +4,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { preview } from "vite";
 
+import { startSwitchableServer, type SwitchableServer } from "./switchable-server.ts";
+
 export type AppServer = { url: string; close: () => Promise<void> };
 
 const appRoot = fileURLToPath(new URL("../../apps/watchlist/", import.meta.url));
@@ -20,4 +22,17 @@ export async function startAppServer(): Promise<AppServer> {
   });
   const { port } = server.httpServer.address() as AddressInfo;
   return { url: `http://127.0.0.1:${port}`, close: () => server.close() };
+}
+
+/** Сервер, который отдаёт `dist`, а по `switchToNextBuild` – `dist-next` (скрипт `build:next`). */
+export async function startSwitchableAppServer(): Promise<SwitchableServer> {
+  for (const dir of ["dist", "dist-next"]) {
+    if (!existsSync(`${appRoot}${dir}/index.html`)) {
+      throw new Error(`Нет сборки apps/watchlist/${dir}: e2e запускают через pnpm test:e2e`);
+    }
+  }
+  return startSwitchableServer({
+    firstBuildDir: `${appRoot}dist`,
+    nextBuildDir: `${appRoot}dist-next`,
+  });
 }

@@ -12,10 +12,12 @@ function ListScreenDemo({
   records,
   emptyText,
   initialFilters,
+  onUpdate,
 }: {
   records: readonly SampleItem[] | undefined;
   emptyText: string;
   initialFilters?: ListFiltersValue;
+  onUpdate?: () => void;
 }) {
   const [tab, setTab] = useState(ALL_TAB);
   const visible = records && itemsOfTab(records, tab);
@@ -34,6 +36,7 @@ function ListScreenDemo({
       onOpenItem={() => {}}
       onAdd={() => {}}
       onOpenProfile={() => {}}
+      onUpdate={onUpdate}
     />
   );
 }
@@ -42,7 +45,11 @@ const meta = {
   title: "Компоненты/ListScreen",
   component: ListScreenDemo,
   args: { records: SAMPLE_ITEMS, emptyText: "Пока пусто" },
-  argTypes: { records: { control: false }, initialFilters: { control: false } },
+  argTypes: {
+    records: { control: false },
+    initialFilters: { control: false },
+    onUpdate: { control: false },
+  },
 } satisfies Meta<typeof ListScreenDemo>;
 
 export default meta;
@@ -56,6 +63,10 @@ export const WithActiveFilter: Story = {
 
 export const Empty: Story = {
   args: { records: [] },
+};
+
+export const WithNewVersion: Story = {
+  args: { onUpdate: () => {} },
 };
 
 export const Loading: Story = {

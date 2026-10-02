@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:next": "APP_VERSION='2000-01-01 · 2222222' vite build --outDir dist-next",
     "preview": "vite preview",
     "check-types": "tsc --noEmit && tsc --noEmit --project tsconfig.sw.json",
     "storybook": "storybook dev --port 6006 --no-open",
