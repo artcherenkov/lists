@@ -120,6 +120,27 @@ test("тост об удалении с названием в одну стро�
   expect(toastBottom).toBeLessThanOrEqual(tabsBox.y);
 });
 
+test("плитка под пустой частью нижнего ряда кнопок открывается нажатием", async ({ page }) => {
+  await page.goto("/");
+  // «Долгая осень» – плитка левой колонки в нижнем ряду списка. Её центр ставится под точку
+  // слева от «Добавить», на высоте центра кнопки.
+  const tile = page.getByRole("main").getByRole("button", { name: /Долгая осень/ });
+  const point = { x: 60, y: page.viewportSize()!.height - 24 - 32 };
+  const tileBox = (await tile.boundingBox())!;
+  await page.evaluate((delta) => scrollBy(0, delta), tileBox.y + tileBox.height / 2 - point.y);
+
+  const isTileUnderPoint = await tile.evaluate(
+    (element, { x, y }) => element.contains(document.elementFromPoint(x, y)),
+    point,
+  );
+  expect(isTileUnderPoint).toBe(true);
+
+  await page.touchscreen.tap(point.x, point.y);
+
+  const card = page.getByRole("dialog", { name: "Изменить" });
+  await expect(card.getByText("Долгая осень", { exact: true })).toBeVisible();
+});
+
 test("смена типа в фильтрах видна на кнопке, «Сбросить» её возвращает", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Фильтры" }).click();

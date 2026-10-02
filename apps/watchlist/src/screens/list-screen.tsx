@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@lists/ui/components/ui/tabs";
 import { PlusIcon, UserIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 
+import { GlassButton } from "./glass-button.tsx";
 import { PosterCard, type PosterCardView } from "./poster-card.tsx";
 import { UpdateButton } from "./update-button.tsx";
 
@@ -34,7 +35,7 @@ export function ListScreen({
   /** Синхронный: родитель открывает шторку через `openAddSheet` в стеке этого же клика. */
   onAdd: () => void;
   onOpenProfile: () => void;
-  /** Есть, когда новая версия скачана: тогда слева от «Добавить» показана кнопка обновления. */
+  /** Есть, когда новая версия скачана: тогда показана кнопка обновления. */
   onUpdate?: () => void;
 }) {
   return (
@@ -85,17 +86,18 @@ export function ListScreen({
 
       {/* Портал наружу из #root: причина – в комментарии к обёртке в index.html. */}
       {createPortal(
-        <>
+        // Пустая часть ряда нажатий не принимает: плитки под ней открываются, нажатия ловят только кнопки.
+        <div className="pointer-events-none fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 z-40 flex gap-3 *:pointer-events-auto">
           {onUpdate && <UpdateButton onUpdate={onUpdate} />}
-          <Button
+          <GlassButton
             size="icon"
             aria-label="Добавить"
             onClick={onAdd}
-            className="fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-40 size-16 rounded-full border border-white/25 bg-primary/65 shadow-lg backdrop-blur-xl hover:bg-primary/75"
+            className="ml-auto size-16"
           >
             <PlusIcon className="size-7" />
-          </Button>
-        </>,
+          </GlassButton>
+        </div>,
         document.body,
       )}
     </main>
