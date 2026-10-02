@@ -10,14 +10,11 @@ type LoadedIcon = {
   cornerAlphas: number[];
 };
 
-// Иконку берём по ссылке из страницы и раскодируем так, как её раскодирует браузер: битая ссылка
-// или пропавший файл, вместо которого страница отдаёт index.html, видны здесь, а не после
-// установки на телефон.
-async function loadIconLinkedFromPage(page: Page, rel: string): Promise<LoadedIcon> {
-  return page.evaluate(async (linkRel) => {
-    const link = document.querySelector<HTMLLinkElement>(`link[rel="${linkRel}"]`);
-    if (!link) throw new Error(`На странице нет <link rel="${linkRel}">`);
-    const response = await fetch(link.href);
+// Иконку берём по ссылке и раскодируем так, как её раскодирует браузер: битая ссылка или пропавший
+// файл, вместо которого страница отдаёт index.html, видны здесь, а не после установки на телефон.
+async function loadIcon(page: Page, url: string): Promise<LoadedIcon> {
+  return page.evaluate(async (iconUrl) => {
+    const response = await fetch(iconUrl);
     const bitmap = await createImageBitmap(await response.blob());
     const canvas = document.createElement("canvas");
     canvas.width = bitmap.width;
@@ -36,7 +33,19 @@ async function loadIconLinkedFromPage(page: Page, rel: string): Promise<LoadedIc
         [bitmap.width - 1, bitmap.height - 1],
       ].map(([x, y]) => context.getImageData(x!, y!, 1, 1).data[3]!),
     };
+  }, url);
+}
+
+async function hrefOfLinkOnPage(page: Page, rel: string): Promise<string> {
+  return page.evaluate((linkRel) => {
+    const link = document.querySelector<HTMLLinkElement>(`link[rel="${linkRel}"]`);
+    if (!link) throw new Error(`На странице нет <link rel="${linkRel}">`);
+    return link.href;
   }, rel);
+}
+
+async function loadIconLinkedFromPage(page: Page, rel: string): Promise<LoadedIcon> {
+  return loadIcon(page, await hrefOfLinkOnPage(page, rel));
 }
 
 test("иконка вкладки отдаётся приложением как PNG 64×64", async ({ page }) => {
@@ -55,4 +64,32 @@ test("apple-touch-icon отдаётся приложением как непро
 
   expect(icon).toMatchObject({ status: 200, contentType: "image/png", width: 180, height: 180 });
   expect(icon.cornerAlphas).toEqual([255, 255, 255, 255]);
+});
+
+// Тест падает, если страница не ссылается на манифест, путь иконки в нём ведёт мимо файла, файл
+// не того размера или манифест заявляет не 192 и 512.
+test("иконки манифеста отдаются как PNG заявленных в нём размеров", async ({ page }) => {
+  await page.goto("/");
+
+  const manifestUrl = await hrefOfLinkOnPage(page, "manifest");
+  const manifest = await page.evaluate(
+    async (url) =>
+      (await fetch(url)).json() as Promise<{ icons: { src: string; sizes: string }[] }>,
+    manifestUrl,
+  );
+  const icons = await Promise.all(
+    manifest.icons.map(async ({ src, sizes }) => ({
+      declaredSizes: sizes,
+      ...(await loadIcon(page, new URL(src, manifestUrl).href)),
+    })),
+  );
+
+  expect(icons.map((icon) => icon.declaredSizes)).toEqual(["192x192", "512x512"]);
+  for (const icon of icons) {
+    expect(icon).toMatchObject({
+      status: 200,
+      contentType: "image/png",
+      declaredSizes: `${icon.width}x${icon.height}`,
+    });
+  }
 });

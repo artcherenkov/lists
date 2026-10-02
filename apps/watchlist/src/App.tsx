@@ -23,9 +23,11 @@ import { AddSheet, openAddSheet } from "./screens/add-sheet.tsx";
 import { ItemSheet } from "./screens/item-sheet.tsx";
 import { ListScreen } from "./screens/list-screen.tsx";
 import { ProfileSheet } from "./screens/profile-sheet.tsx";
+import { useServiceWorker } from "./use-service-worker.ts";
 
 // Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
 export function App() {
+  useServiceWorker();
   const list = useSampleList();
   const [tab, setTab] = useState(ALL_TAB);
   const [filters, setFilters] = useState<ListFiltersValue>(DEFAULT_FILTERS);

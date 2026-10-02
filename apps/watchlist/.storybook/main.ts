@@ -1,6 +1,14 @@
 import type { StorybookConfig } from "@storybook/react-vite";
 
-import { mergeConfig } from "vite";
+import { mergeConfig, type InlineConfig, type PluginOption } from "vite";
+
+function withoutPwaPlugin(viteConfig: InlineConfig): InlineConfig {
+  const isPwaPlugin = (plugin: PluginOption) =>
+    Array.isArray(plugin)
+      ? plugin.some(isPwaPlugin)
+      : plugin && "name" in plugin && plugin.name.startsWith("vite-plugin-pwa");
+  return { ...viteConfig, plugins: viteConfig.plugins?.filter((plugin) => !isPwaPlugin(plugin)) };
+}
 
 const config: StorybookConfig = {
   stories: ["../src/stories/**/*.stories.tsx"],
@@ -14,9 +22,12 @@ const config: StorybookConfig = {
     disableWhatsNewNotifications: true,
   },
   features: { sidebarOnboardingChecklist: false },
-  // Tailwind, React и алиасы Storybook берёт из vite.config.ts приложения.
+  // Tailwind, React и алиасы Storybook берёт из vite.config.ts приложения, а плагин PWA убирает:
+  // с ним сборка падает, потому что sb-manager/globals-runtime.js больше предела предкеша.
+  // Без плагина нет и модуля virtual:pwa-register/react: история, которая подключит код с хуком
+  // регистрации, не соберётся.
   viteFinal: (viteConfig) =>
-    mergeConfig(viteConfig, {
+    mergeConfig(withoutPwaPlugin(viteConfig), {
       build: {
         rolldownOptions: {
           // @base-ui помечает файлы директивой "use client", и сборщик на каждый предупреждает,
