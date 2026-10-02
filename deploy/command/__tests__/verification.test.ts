@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   REVALIDATION_PROBES,
   assessApiStatus,
+  assessAttempt,
   assessFile,
   assessRevalidationProbe,
   assessSite,
+  nextRetryDelayMs,
   urlPathsForFile,
+  verificationDeadlineMs,
   type FileResponse,
 } from "../verification.ts";
 
@@ -247,5 +250,95 @@ describe("оценка сайта целиком", () => {
         "/api/: ответ 200 вместо 404",
       ],
     });
+  });
+});
+
+describe("итог проверки: годен, вернуть, не удалось проверить", () => {
+  const complete = {
+    files: [pageResponse(), assetResponse()],
+    revalidationProbes: [
+      { name: "If-None-Match" as const, status: 200 },
+      { name: "If-Modified-Since" as const, status: 200 },
+    ],
+    apiStatus: 404,
+  };
+
+  it("все ответы верны – годен", () => {
+    expect(assessAttempt(complete, null)).toEqual({ kind: "ok" });
+  });
+
+  it("неверное содержимое – вернуть", () => {
+    const site = { ...complete, files: [pageResponse({ bodySha256: "2".repeat(64) })] };
+
+    expect(assessAttempt(site, null)).toEqual({
+      kind: "rollback",
+      reasons: ["/: содержимое не совпадает с суммой из SHA256SUMS"],
+    });
+  });
+
+  it("неверный заголовок – вернуть", () => {
+    const site = { ...complete, files: [pageResponse({ headers: { "x-robots-tag": "noindex" } })] };
+
+    expect(assessAttempt(site, null)).toEqual({
+      kind: "rollback",
+      reasons: ["/: в Cache-Control нет no-cache"],
+    });
+  });
+
+  it("неверный статус – вернуть", () => {
+    expect(assessAttempt({ ...complete, apiStatus: 502 }, null).kind).toBe("rollback");
+  });
+
+  it("запрос остался без ответа, а полученное верно – не удалось проверить", () => {
+    const partial = { files: [pageResponse()], revalidationProbes: [], apiStatus: null };
+
+    expect(assessAttempt(partial, "запрос /assets/a.js не получил ответа")).toEqual({
+      kind: "unverified",
+      reason: "запрос /assets/a.js не получил ответа",
+    });
+  });
+
+  it("неверный ответ главнее потерянного запроса – вернуть", () => {
+    const partial = {
+      files: [pageResponse({ status: 502 })],
+      revalidationProbes: [],
+      apiStatus: null,
+    };
+
+    expect(assessAttempt(partial, "запрос не получил ответа").kind).toBe("rollback");
+  });
+
+  it("незаконченная попытка без причины обрыва не оценивается как годная лишь по тому, что получено", () => {
+    const partial = { files: [], revalidationProbes: [], apiStatus: null };
+
+    expect(assessAttempt(partial, "нет ответа").kind).not.toBe("ok");
+  });
+});
+
+describe("повторы проверки до предельного срока", () => {
+  it("срок не вышел – пауза между проходами", () => {
+    expect(nextRetryDelayMs({ elapsedMs: 10_000, deadlineMs: 60_000, retryDelayMs: 5_000 })).toBe(
+      5_000,
+    );
+  });
+
+  it("последний повтор допустим ровно в срок", () => {
+    expect(nextRetryDelayMs({ elapsedMs: 55_000, deadlineMs: 60_000, retryDelayMs: 5_000 })).toBe(
+      5_000,
+    );
+  });
+
+  it("повтор не уместился в срок – повторов больше нет", () => {
+    expect(
+      nextRetryDelayMs({ elapsedMs: 55_001, deadlineMs: 60_000, retryDelayMs: 5_000 }),
+    ).toBeNull();
+  });
+
+  it("первая выкладка ждёт дольше обычной: Caddy выпускает сертификат", () => {
+    const first = verificationDeadlineMs({ current: null });
+    const usual = verificationDeadlineMs({ current: "a".repeat(40) });
+
+    expect(first).toBeGreaterThan(usual);
+    expect(usual).toBeGreaterThanOrEqual(30_000);
   });
 });

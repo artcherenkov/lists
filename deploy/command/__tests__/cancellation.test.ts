@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createEscalation, stopWhenLockLost } from "../cancellation.ts";
+import { createEscalation, returnCancellation, stopWhenLockLost } from "../cancellation.ts";
 
 describe("повторное прерывание", () => {
   function setup() {
@@ -80,5 +80,24 @@ describe("потеря блокировки", () => {
     );
 
     expect(operation.stop.aborted).toBe(false);
+  });
+});
+
+describe("остановка возврата", () => {
+  it("мягкая остановка возврат не прерывает, потеря блокировки прерывает, жёсткая остаётся той же", () => {
+    const stop = new AbortController();
+    const kill = new AbortController();
+    const lockLost = new AbortController();
+    const cancellation = returnCancellation(
+      { stop: stop.signal, kill: kill.signal },
+      lockLost.signal,
+    );
+
+    stop.abort(new Error("Ctrl+C"));
+    expect(cancellation.stop.aborted).toBe(false);
+
+    lockLost.abort(new Error("блокировка потеряна"));
+    expect(cancellation.stop.aborted).toBe(true);
+    expect(cancellation.kill).toBe(kill.signal);
   });
 });

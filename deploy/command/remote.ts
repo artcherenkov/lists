@@ -8,7 +8,12 @@ import { REMOTE_ROOT, SSH_HOST } from "./config.ts";
 import { stopReason, stopReasonOfAbort } from "./errors.ts";
 import { run } from "./exec.ts";
 import { assertCommitHash, parsePointerState, type PointerState } from "./pointers.ts";
-import { createStepRunner, inspectStateCommand, type ExecuteOnServer } from "./steps.ts";
+import {
+  createStepRunner,
+  inspectStateCommand,
+  type ExecuteOnServer,
+  type StepOptions,
+} from "./steps.ts";
 import { buildSwitchScript } from "./switch-script.ts";
 
 /** Код выхода `flock`-обёртки, когда блокировка занята (`EX_TEMPFAIL`). */
@@ -31,6 +36,8 @@ const SSH_OPTIONS = [
   "-o",
   "ServerAliveCountMax=4",
 ];
+
+type ServerStepOptions = Pick<StepOptions, "interruptible">;
 
 const COMPOSE_FILE = `${REMOTE_ROOT}/current/compose.yaml`;
 
@@ -243,20 +250,26 @@ export function createRemote(cancel: Cancellation, execute: ExecuteOnServer = ex
       await runStep("переключение указателей", buildSwitchScript(target, recordActivation));
     },
 
-    /** После переключения шаг доводится до конца: остановка между ним и `reload` оставила бы релиз наполовину. */
-    async composeUp(): Promise<void> {
+    /**
+     * По умолчанию мягкая остановка шагу не мешает: после переключения он доводится до конца, иначе
+     * релиз остался бы наполовину. Возврат передаёт `interruptible: true` и создаёт `Remote` с
+     * остановкой только по потере блокировки: чужая выкладка рядом важнее, чем его доведение.
+     */
+    async composeUp(options: ServerStepOptions = {}): Promise<void> {
       await runStep(
         "docker compose up",
         `docker compose -f ${COMPOSE_FILE} up -d --wait --wait-timeout 120`,
-        { interruptible: false },
+        {
+          interruptible: options.interruptible ?? false,
+        },
       );
     },
 
-    async caddyReload(): Promise<void> {
+    async caddyReload(options: ServerStepOptions = {}): Promise<void> {
       await runStep(
         "caddy reload",
         `docker compose -f ${COMPOSE_FILE} exec -T caddy caddy reload --config /srv/current/Caddyfile --adapter caddyfile`,
-        { interruptible: false },
+        { interruptible: options.interruptible ?? false },
       );
     },
   };

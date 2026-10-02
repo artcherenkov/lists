@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { sha256 } from "../checksums.ts";
-import { verifySite } from "../verify-site.ts";
+import { verifySite, type VerifyOptions } from "../verify-site.ts";
 
 const FILES: Record<string, string> = {
   "index.html": "<!doctype html><title>page</title>",
@@ -32,11 +32,21 @@ interface SiteBehaviour {
   redirectRoot?: boolean;
   /** Отвечает на `/index.html` перенаправлением, как `http.FileServer` из стандартной библиотеки Go. */
   redirectIndexHtml?: boolean;
+  /** Рвёт соединение на первых запросах, как обрыв сети: ответа нет. */
+  dropFirstRequests?: number;
+  /** Обрывает соединение посреди тела ответа на этот путь. */
+  cutBodyAt?: string;
 }
+
+/** Без повторов: срок нулевой, первый проход – последний. */
+const ONCE: VerifyOptions = { deadlineMs: 0, retryDelayMs: 10 };
+/** Повторы часто и недолго. */
+const RETRYING: VerifyOptions = { deadlineMs: 2_000, retryDelayMs: 20 };
 
 const CORRECT: SiteBehaviour = { stripIfNoneMatch: true, stripIfModifiedSince: true };
 
 let server: Server | undefined;
+let requestCount = 0;
 
 afterEach(async () => {
   if (server) await new Promise((resolve) => server!.close(resolve));
@@ -48,7 +58,13 @@ afterEach(async () => {
  * будущем без срезки заголовков дают `304` (Go `http.ServeContent`, `checkPreconditions`).
  */
 async function startSite(behaviour: SiteBehaviour): Promise<string> {
+  requestCount = 0;
   server = createServer((request: IncomingMessage, response: ServerResponse) => {
+    requestCount += 1;
+    if (requestCount <= (behaviour.dropFirstRequests ?? 0)) {
+      request.socket.destroy();
+      return;
+    }
     const url = new URL(request.url ?? "/", "http://site.test");
     if (url.pathname.startsWith("/api/")) {
       response.writeHead(404).end();
@@ -85,6 +101,13 @@ async function startSite(behaviour: SiteBehaviour): Promise<string> {
       return;
     }
 
+    if (path === behaviour.cutBodyAt) {
+      response.writeHead(200, { "content-length": "1000" });
+      response.write("x");
+      setTimeout(() => request.socket.destroy(), 10);
+      return;
+    }
+
     const assets = path.startsWith("assets/");
     response.writeHead(200, {
       "cache-control": assets ? "public, max-age=31536000, immutable" : "no-cache",
@@ -100,19 +123,20 @@ describe("проверка сайта по HTTP-ответам", () => {
   it("сайт отвечает как задумано – годен, проверены все файлы релиза", async () => {
     const url = await startSite(CORRECT);
 
-    expect(await verifySite(url, ENTRIES)).toEqual({
-      verdict: { ok: true },
+    expect(await verifySite(url, ENTRIES, ONCE)).toEqual({
+      assessment: { kind: "ok" },
       filesChecked: ENTRIES.length,
+      attempts: 1,
     });
   });
 
   it("подменённое содержимое файла – провал с именем файла", async () => {
     const url = await startSite({ ...CORRECT, corrupt: "assets/index-abc123.js" });
 
-    const { verdict } = await verifySite(url, ENTRIES);
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
 
-    expect(verdict).toEqual({
-      ok: false,
+    expect(assessment).toEqual({
+      kind: "rollback",
       reasons: ["/assets/index-abc123.js: содержимое не совпадает с суммой из SHA256SUMS"],
     });
   });
@@ -120,10 +144,10 @@ describe("проверка сайта по HTTP-ответам", () => {
   it("сайт не срезает If-None-Match: sw.js получает 304 – провал", async () => {
     const url = await startSite({ ...CORRECT, stripIfNoneMatch: false });
 
-    const { verdict } = await verifySite(url, ENTRIES);
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
 
-    expect(verdict).toEqual({
-      ok: false,
+    expect(assessment).toEqual({
+      kind: "rollback",
       reasons: ["sw.js с устаревшим If-None-Match: ответ 304 вместо 200"],
     });
   });
@@ -131,10 +155,10 @@ describe("проверка сайта по HTTP-ответам", () => {
   it("сайт не срезает If-Modified-Since: sw.js получает 304 – провал", async () => {
     const url = await startSite({ ...CORRECT, stripIfModifiedSince: false });
 
-    const { verdict } = await verifySite(url, ENTRIES);
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
 
-    expect(verdict).toEqual({
-      ok: false,
+    expect(assessment).toEqual({
+      kind: "rollback",
       reasons: ["sw.js с устаревшим If-Modified-Since: ответ 304 вместо 200"],
     });
   });
@@ -142,10 +166,10 @@ describe("проверка сайта по HTTP-ответам", () => {
   it("перенаправление вместо файла – провал, а не чтение другого адреса", async () => {
     const url = await startSite({ ...CORRECT, redirectRoot: true });
 
-    const { verdict } = await verifySite(url, ENTRIES);
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
 
-    expect(verdict).toEqual({
-      ok: false,
+    expect(assessment).toEqual({
+      kind: "rollback",
       reasons: ["/: ответ 308 вместо 200"],
     });
   });
@@ -153,20 +177,12 @@ describe("проверка сайта по HTTP-ответам", () => {
   it("страница по /index.html отвечает не 200 – провал: этот адрес запрашивает предкеш Workbox", async () => {
     const url = await startSite({ ...CORRECT, redirectIndexHtml: true });
 
-    const { verdict } = await verifySite(url, ENTRIES);
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
 
-    expect(verdict).toEqual({
-      ok: false,
+    expect(assessment).toEqual({
+      kind: "rollback",
       reasons: ["/index.html: ответ 301 вместо 200"],
     });
-  });
-
-  it("сайт не ответил – исключение, а не вердикт «вернуть»", async () => {
-    const url = await startSite(CORRECT);
-    await new Promise((resolve) => server!.close(resolve));
-    server = undefined;
-
-    await expect(verifySite(url, ENTRIES)).rejects.toThrow(/Не удалось проверить сайт/);
   });
 
   it("остановка операции во время проверки – её причина, а не «сайт не ответил»", async () => {
@@ -174,6 +190,86 @@ describe("проверка сайта по HTTP-ответам", () => {
     const stop = new AbortController();
     stop.abort(new Error("операция остановлена"));
 
-    await expect(verifySite(url, ENTRIES, stop.signal)).rejects.toThrow("операция остановлена");
+    await expect(verifySite(url, ENTRIES, { ...ONCE, signal: stop.signal })).rejects.toThrow(
+      "операция остановлена",
+    );
+  });
+});
+
+describe("сбои сети при проверке", () => {
+  it("сайт не ответил до срока – «не удалось проверить», а не «вернуть»", async () => {
+    const url = await startSite(CORRECT);
+    await new Promise((resolve) => server!.close(resolve));
+    server = undefined;
+
+    const result = await verifySite(url, ENTRIES, ONCE);
+
+    expect(result.assessment).toEqual({
+      kind: "unverified",
+      reason: expect.stringContaining("не получил ответа"),
+    });
+    expect(result.attempts).toBe(1);
+  });
+
+  it("сайт не отвечает, потом отвечает верно – повтор до срока, итог «годен»", async () => {
+    const url = await startSite({ ...CORRECT, dropFirstRequests: 3 });
+    const retries: number[] = [];
+
+    const result = await verifySite(url, ENTRIES, {
+      ...RETRYING,
+      onRetry: ({ attempt }) => retries.push(attempt),
+    });
+
+    expect(result.assessment).toEqual({ kind: "ok" });
+    expect(result.attempts).toBe(4);
+    expect(retries).toEqual([1, 2, 3]);
+  });
+
+  it("сайт не отвечает весь срок – повторы идут до срока и кончаются «не удалось проверить»", async () => {
+    const url = await startSite({ ...CORRECT, dropFirstRequests: Infinity });
+
+    const result = await verifySite(url, ENTRIES, { deadlineMs: 200, retryDelayMs: 50 });
+
+    expect(result.assessment.kind).toBe("unverified");
+    expect(result.attempts).toBeGreaterThan(2);
+    expect(result.attempts).toBeLessThanOrEqual(5);
+  });
+
+  it("обрыв посреди тела ответа – тоже «ответа не было»", async () => {
+    const url = await startSite({ ...CORRECT, cutBodyAt: "manifest.webmanifest" });
+
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
+
+    expect(assessment.kind).toBe("unverified");
+  });
+
+  it("неверный ответ – «вернуть» сразу, без повторов", async () => {
+    const url = await startSite({ ...CORRECT, corrupt: "assets/index-abc123.js" });
+
+    const result = await verifySite(url, ENTRIES, RETRYING);
+
+    expect(result.assessment.kind).toBe("rollback");
+    expect(result.attempts).toBe(1);
+  });
+
+  it("неверный ответ перед оборвавшимся запросом – «вернуть»: неверный ответ уже получен", async () => {
+    const url = await startSite({ ...CORRECT, corrupt: "index.html", cutBodyAt: "sw.js" });
+
+    const { assessment } = await verifySite(url, ENTRIES, ONCE);
+
+    expect(assessment.kind).toBe("rollback");
+  });
+
+  it("остановка в паузе между повторами – её причина, и ждать срока не нужно", async () => {
+    const url = await startSite({ ...CORRECT, dropFirstRequests: Infinity });
+    const stop = new AbortController();
+    const checking = verifySite(url, ENTRIES, {
+      deadlineMs: 60_000,
+      retryDelayMs: 30_000,
+      signal: stop.signal,
+      onRetry: () => stop.abort(new Error("остановлено в паузе")),
+    });
+
+    await expect(checking).rejects.toThrow("остановлено в паузе");
   });
 });

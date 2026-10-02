@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { StoppedError } from "../cancellation.ts";
-import { stopReason, stopReasonOfAbort } from "../errors.ts";
+import { formatError, stopReason, stopReasonOfAbort } from "../errors.ts";
 
 function abortError(): Error {
   const error = new Error("The operation was aborted");
@@ -41,5 +41,13 @@ describe("причина остановки", () => {
     controller.abort(new StoppedError());
 
     expect(stopReasonOfAbort(new Error("spawn ENOENT"), controller.signal)).toBeUndefined();
+  });
+});
+
+describe("текст ошибки", () => {
+  it("ошибка и цепочка причин – по строке на каждую", () => {
+    const error = new Error("верхняя", { cause: new Error("средняя", { cause: "нижняя" }) });
+
+    expect(formatError(error)).toBe("верхняя\n  причина: средняя\n  причина: нижняя");
   });
 });

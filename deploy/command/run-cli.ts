@@ -1,4 +1,5 @@
 import { StoppedError, createEscalation, type Cancellation } from "./cancellation.ts";
+import { formatError } from "./errors.ts";
 import { warn } from "./log.ts";
 import { LockBusyError } from "./remote.ts";
 
@@ -32,14 +33,4 @@ export async function runCli(command: (cancel: Cancellation) => Promise<void>): 
     console.error(error instanceof LockBusyError ? error.message : `Ошибка: ${formatError(error)}`);
     process.exitCode = stop.signal.aborted ? 130 : 1;
   }
-}
-
-function formatError(error: unknown): string {
-  const lines: string[] = [];
-  for (let current = error; current !== undefined;) {
-    const message = current instanceof Error ? current.message : String(current);
-    lines.push(message);
-    current = current instanceof Error ? current.cause : undefined;
-  }
-  return lines.join("\n  причина: ");
 }

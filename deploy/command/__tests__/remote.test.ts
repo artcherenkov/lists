@@ -61,4 +61,15 @@ describe("шаги выкладки на сервере", () => {
     expect(error).toBeInstanceOf(StoppedError);
     expect(execute).not.toHaveBeenCalled();
   });
+
+  it("с interruptible: true compose up и reload останавливаются мягкой остановкой, как остальные шаги", async () => {
+    const { stop, execute, remote } = setup();
+    stop.abort(new Error("блокировка потеряна"));
+
+    await expect(remote.composeUp({ interruptible: true })).rejects.toThrow("блокировка потеряна");
+    await expect(remote.caddyReload({ interruptible: true })).rejects.toThrow(
+      "блокировка потеряна",
+    );
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

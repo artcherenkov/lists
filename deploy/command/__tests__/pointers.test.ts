@@ -4,6 +4,7 @@ import {
   assertCommitHash,
   parsePointerState,
   planDeploy,
+  planReturn,
   pointersAfterDeploy,
 } from "../pointers.ts";
 
@@ -91,6 +92,26 @@ describe("план выкладки", () => {
       recordActivation: true,
       next: { current: A, previous: null },
     });
+  });
+});
+
+describe("возврат после неудачной выкладки", () => {
+  it("оба указателя – как до выкладки, а не поменянные местами", () => {
+    expect(planReturn({ current: A, previous: B })).toEqual({
+      target: { current: A, previous: B },
+      recordActivation: true,
+    });
+  });
+
+  it("previous не было – его и не будет", () => {
+    expect(planReturn({ current: A, previous: null })?.target).toEqual({
+      current: A,
+      previous: null,
+    });
+  });
+
+  it("первая выкладка: возвращаться некуда", () => {
+    expect(planReturn({ current: null, previous: null })).toBeNull();
   });
 });
 

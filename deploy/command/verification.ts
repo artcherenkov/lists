@@ -3,6 +3,8 @@
  * `verify-site.ts`. Каждая функция возвращает причины провала; пустой список – годен.
  */
 
+import { FIRST_DEPLOY_VERIFY_DEADLINE_MS, VERIFY_DEADLINE_MS } from "./config.ts";
+
 const ASSETS_PREFIX = "assets/";
 const INDEX_PAGE = "index.html";
 
@@ -40,10 +42,14 @@ export interface RevalidationProbeResponse {
   status: number;
 }
 
+/**
+ * Ответы, полученные за одну попытку. Попытка могла оборваться на запросе без ответа, поэтому
+ * списки бывают неполными, а `apiStatus` – `null`, если до `/api/` дело не дошло.
+ */
 export interface SiteResponses {
   files: FileResponse[];
   revalidationProbes: RevalidationProbeResponse[];
-  apiStatus: number;
+  apiStatus: number | null;
 }
 
 export type Verdict = { ok: true } | { ok: false; reasons: string[] };
@@ -103,9 +109,52 @@ export function assessSite(site: SiteResponses): Verdict {
   const reasons = [
     ...site.files.flatMap(assessFile),
     ...site.revalidationProbes.flatMap(assessRevalidationProbe),
-    ...assessApiStatus(site.apiStatus),
+    ...(site.apiStatus === null ? [] : assessApiStatus(site.apiStatus)),
   ];
   return reasons.length === 0 ? { ok: true } : { ok: false, reasons };
+}
+
+/**
+ * Итог проверки сайта после включения релиза:
+ * - `ok` – сайт отдаёт релиз как задумано;
+ * - `rollback` – сайт ответил, и ответ неверен (содержимое, статус, заголовки): релиз возвращают;
+ * - `unverified` – ответа не было (таймаут, обрыв, DNS, TLS): о релизе ничего не известно, его не
+ *   трогают, а ошибка не должна откатывать исправный сайт из-за сети ноутбука.
+ */
+export type Assessment =
+  | { kind: "ok" }
+  | { kind: "rollback"; reasons: string[] }
+  | { kind: "unverified"; reason: string };
+
+/**
+ * Оценка попытки. Неверный ответ главнее потерянного запроса: он уже получен, и повтор его не
+ * исправит. `noResponse` – описание первого запроса, оставшегося без ответа, иначе `null`.
+ */
+export function assessAttempt(site: SiteResponses, noResponse: string | null): Assessment {
+  const verdict = assessSite(site);
+  if (!verdict.ok) return { kind: "rollback", reasons: verdict.reasons };
+  if (noResponse !== null) return { kind: "unverified", reason: noResponse };
+  return { kind: "ok" };
+}
+
+/**
+ * Через сколько повторить запросы, если ответа не было, или `null`, если предельный срок вышел.
+ * Последний повтор допустим ровно в срок.
+ */
+export function nextRetryDelayMs(input: {
+  elapsedMs: number;
+  deadlineMs: number;
+  retryDelayMs: number;
+}): number | null {
+  return input.elapsedMs + input.retryDelayMs <= input.deadlineMs ? input.retryDelayMs : null;
+}
+
+/**
+ * Сколько ждать ответа сайта. При первой выкладке (`current` ещё нет) Caddy выпускает сертификат:
+ * на `cora` это заняло 6 с, но запас на повторы ACME и распространение DNS нужен больше обычного.
+ */
+export function verificationDeadlineMs(stateBefore: { current: string | null }): number {
+  return stateBefore.current === null ? FIRST_DEPLOY_VERIFY_DEADLINE_MS : VERIFY_DEADLINE_MS;
 }
 
 function cacheDirectives(header: string | undefined): string[] {

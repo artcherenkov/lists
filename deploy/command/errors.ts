@@ -18,3 +18,14 @@ export function stopReasonOfAbort(
 ): Error | undefined {
   return error instanceof Error && error.name === "AbortError" ? stopReason(signal) : undefined;
 }
+
+/** Ошибка и цепочка её причин, по строке на каждую. */
+export function formatError(error: unknown): string {
+  const lines: string[] = [];
+  for (let current = error; current !== undefined;) {
+    const message = current instanceof Error ? current.message : String(current);
+    lines.push(message);
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return lines.join("\n  причина: ");
+}

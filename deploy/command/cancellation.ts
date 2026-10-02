@@ -19,6 +19,15 @@ export function stopWhenLockLost(cancel: Cancellation, lockLost: AbortSignal): C
 }
 
 /**
+ * Остановка шагов возврата: мягкая остановка возврат не прерывает, его бросать на полпути хуже,
+ * чем довести. Прерывают его потеря блокировки (рядом может идти другая выкладка) и жёсткая
+ * остановка.
+ */
+export function returnCancellation(cancel: Cancellation, lockLost: AbortSignal): Cancellation {
+  return { stop: lockLost, kill: cancel.kill };
+}
+
+/**
  * Что делает каждое следующее прерывание (Ctrl+C или SIGTERM): первое просит остановиться между
  * шагами, второе прерывает шаг на сервере, третье выходит из процесса.
  */
