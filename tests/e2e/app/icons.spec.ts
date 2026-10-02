@@ -93,3 +93,26 @@ test("иконки манифеста отдаются как PNG заявлен
     });
   }
 });
+
+// Chrome не предложит установку без `display` (кроме `browser`), `start_url` и имени (`name` или
+// `short_name`). Остальные значения – решение вехи 2: отдельное окно, открытие с главного экрана,
+// название на русском; их потеря установку не ломает.
+test("манифест задаёт имя, отдельное окно и стартовую страницу установленного приложения", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const manifestUrl = await hrefOfLinkOnPage(page, "manifest");
+  const manifest = await page.evaluate(
+    async (url) => (await fetch(url)).json() as Promise<Record<string, unknown>>,
+    manifestUrl,
+  );
+
+  expect(manifest).toMatchObject({
+    name: "Вотчлист",
+    short_name: "Вотчлист",
+    lang: "ru",
+    display: "standalone",
+    start_url: "/",
+  });
+});
