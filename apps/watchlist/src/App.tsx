@@ -22,6 +22,7 @@ import {
 import { AddSheet, openAddSheet } from "./screens/add-sheet.tsx";
 import { ItemSheet } from "./screens/item-sheet.tsx";
 import { ListScreen } from "./screens/list-screen.tsx";
+import { ProfileSheet } from "./screens/profile-sheet.tsx";
 
 // Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
 export function App() {
@@ -30,6 +31,7 @@ export function App() {
   const [filters, setFilters] = useState<ListFiltersValue>(DEFAULT_FILTERS);
   const [adding, setAdding] = useState(false);
   const [openedId, setOpenedId] = useState<string>();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const tabItems = itemsOfTab(list.items, tab);
   const changedFilters = countChangedFilters(filters);
@@ -68,8 +70,7 @@ export function App() {
         emptyText={changedFilters > 0 ? "Нет записей с такими фильтрами" : "Пока пусто"}
         onOpenItem={setOpenedId}
         onAdd={() => openAddSheet(() => setAdding(true))}
-        // TODO: шторка профиля появится вместе со входом; пока иконка ничего не открывает.
-        onOpenProfile={() => {}}
+        onOpenProfile={() => setProfileOpen(true)}
       />
 
       {adding && (
@@ -100,6 +101,10 @@ export function App() {
           onDelete={deleteOpened}
           onClosed={() => setOpenedId(undefined)}
         />
+      )}
+
+      {profileOpen && (
+        <ProfileSheet version={__APP_VERSION__} onClosed={() => setProfileOpen(false)} />
       )}
     </>
   );
