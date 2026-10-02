@@ -21,7 +21,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     async ({}, use) => {
       const server = await startAppServer();
       await use(server);
-      await server.close();
+      await server.stop();
     },
     { scope: "worker" },
   ],
