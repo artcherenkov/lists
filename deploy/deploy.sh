@@ -25,7 +25,7 @@ cleanup() {
 trap cleanup EXIT
 
 log_hint() {
-  echo "Серверная часть доделает начатое сама. Итог – в ssh $HOST tail $ROOT/deploy.log; перед повторным rollback" \
+  echo "Серверная часть доделает начатое сама. Итог – в ssh $HOST tail -n 30 $ROOT/deploy.log; перед повторным rollback" \
     "прочтите его: откат меняет указатели местами, и повтор вернул бы плохой релиз." >&2
 }
 interrupted() {
@@ -39,6 +39,7 @@ remote() {
   local script q="'" bs=\\ rc=0
   script=$(<deploy/remote.sh)
   in_remote=1
+  # Каждый апостроф скрипта заменяется на '\'': так текст переживает обрамление bash -c '…'.
   # shellcheck disable=SC2029 # переменные подставляются здесь намеренно: на сервере их нет
   "${SSH[@]}" "$HOST" "bash -c '${script//$q/$q$bs$q$q}' _ '$ROOT' $1 $2 '$SITE' $3" || rc=$?
   in_remote=0

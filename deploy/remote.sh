@@ -37,7 +37,7 @@ check_site() { # одна проба; 0 – всё верно, иначе пер
   expect "sw.js с If-Modified-Since не 200" [ "$(req sw.js -H 'If-Modified-Since: Fri, 01 Jan 2100 00:00:00 GMT')" = 200 ] || return 1
   set -- current/site/assets/*
   a=${1##*/}
-  expect "assets/$a: нет 200 или immutable" [ "$(req "assets/$a")" = 200 ] || return 1
+  expect "assets/$a: ответ не 200" [ "$(req "assets/$a")" = 200 ] || return 1
   expect "assets/$a: нет Cache-Control: immutable" grep -qi '^cache-control:.*immutable' tmp/h || return 1
   expect "/api/x не 404" [ "$(req api/x)" = 404 ] || return 1
 }
@@ -52,8 +52,7 @@ verify_site() { # повторяет пробу до срока: Caddy може�
   done
 }
 
-# Возврат не ловушкой ERR: в условии (`if activate`) `set -e` не действует, поэтому каждый шаг проверяется явно,
-# а ERR в bash 3.2 срабатывает на сбой `curl` внутри `$(…)` и откатила бы исправную выкладку (в 5.2 – нет).
+# Возврат не ловушкой ERR: в условии (`if activate`) `set -e` не действует, поэтому каждый шаг проверяется явно.
 activate() { # переключает на $target, поднимает сервисы и проверяет сайт; причина неудачи – в $why
   if [ "$cur" != "releases/$target" ]; then
     set_pointers "releases/$target" "$cur" || { why="не удалось переставить указатели"; return 1; }
@@ -68,7 +67,7 @@ restore() { # указатели – ровно как были до выкла�
 }
 
 cd "$root"
-exec 9>>deploy.lock # дописывание, а не усечение; так же открывает файл прежняя TypeScript-команда
+exec 9>>deploy.lock
 flock -n 9 || { echo "Другая выкладка или откат уже идут" >&2; exit 75; }
 trap '' HUP
 # Вывод идёт через tee в журнал: после обрыва ssh `docker` и `caddy` на закрытом stdout получили бы SIGPIPE
