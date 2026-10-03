@@ -26,6 +26,7 @@
 - Docker – colima: 2 CPU и 2 ГБ, контейнеры `pm-trial` уже занимают около 850 МБ. Стек разработки – compose-проект `lists`, порты только на `127.0.0.1`; на Mac заняты 3100, 3200, 5000, 7000, 9222, 30000, 30001 и 63342, а 5175 и 6006 – Vite и Storybook автора. Контейнеры `pm-trial` хранят данные автора: не трогай их, а Docker вызывай только через `docker compose` проекта `lists`. Если стеку не хватит памяти, спроси автора: colima сам не перезапускай.
 - В разработке бот работает через консоль, а Mailpit появится вместе со входом по почте. Не используй рабочий Telegram-токен локально: второй процесс бота заберёт обновления у сервера.
 - Секреты – только в `.env`: читать и менять его агентам запрещено правилом. Стек разработки работает без него, ключи автор кладёт сам. Ключ TMDB есть у автора, а `api.themoviedb.org` с Mac может не открываться без VPN.
+- `shellcheck` ставится из brew (`brew install shellcheck`): без него не проходят `pnpm lint`, `pnpm check` и хук `pre-push`.
 - Браузеры Playwright уже скачаны в `~/Library/Caches/ms-playwright`.
 - Текущие приложения – образец для паритета, читать их можно, менять нельзя: `../watchlist` (ветка `feat/series-updates` в worktree `../watchlist/.claude/worktrees/series-updates`, на сервере – образ `1dbb533`) и `../readlist` (`master`).
 
@@ -34,7 +35,7 @@
 - `pnpm install` – зависимости. Новые ставит только `pnpm add` (`-w` для корня, `--filter <пакет>` для пакета): `package.json` и `pnpm-lock.yaml` руками не правим. Политику минимального возраста релиза pnpm не ослабляем: если свежая версия пакета требует исключения в `pnpm-workspace.yaml`, берём последнюю созревшую.
 - `pnpm dev` – Watchlist на `http://localhost:5175`.
 - `pnpm storybook` – Storybook на `http://localhost:6006`.
-- `pnpm check` – все проверки (перед слиянием – с `TURBO_FORCE=true`, см. «Порядок работы»): `fmt:check`, `lint`, `check-types`, сборка Storybook, unit и e2e. Перед push хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types` и unit – без сборки Storybook и e2e.
+- `pnpm check` – все проверки (перед слиянием – с `TURBO_FORCE=true`, см. «Порядок работы»): `fmt:check`, `lint` (oxlint и `shellcheck` по `deploy/*.sh`), `check-types`, сборка Storybook, unit и e2e. Перед push хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types` и unit – без сборки Storybook и e2e.
 - `pnpm test:unit` – Vitest. `pnpm test:e2e` – сборка приложения и Playwright на ней. Перед написанием тестов прочитай [docs/testing.md](docs/testing.md).
 - `pnpm deploy:v2 [коммит]` – выкладка коммита (по умолчанию `HEAD`) на `https://v2.watchlist.acherenkov.com`; на `cora` выкладываем только ею. `pnpm rollback:v2` – откат на прежний релиз, повторный откат отменяет первый. `bash deploy/setup-server.sh` – первичная настройка `cora`. Устройство сервера, блокировка, прерывание, очистка и ручные действия на сервере – в [deploy/README.md](deploy/README.md).
 - `pnpm fmt` – форматирование oxfmt. Из него исключены сгенерированное (`packages/ui/src/components/ui/**`, `pnpm-lock.yaml`) и файлы, которые ведёт оркестратор вручную: `docs/plan.md`, `docs/milestones/**`, `.claude/**`.

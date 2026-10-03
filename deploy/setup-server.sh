@@ -168,6 +168,7 @@ refuse_if_old_timer_pending() {
 
 install_packages() {
   step "Пакеты Ubuntu: $PACKAGES"
+  # shellcheck disable=SC2086 # PACKAGES – имена пакетов через пробел, каждое слово – отдельный аргумент
   remote_script $PACKAGES <<'EOF'
 set -eu
 missing=
