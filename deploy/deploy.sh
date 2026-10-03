@@ -74,12 +74,13 @@ deploy() {
   if [ -n "$(git status --porcelain --untracked-files=all)" ]; then
     echo "Внимание: незакоммиченное и неотслеживаемое в релиз не попадёт." >&2
   fi
-  # Быстрый отказ до сборки: блокировку не держим, её берёт серверная часть. Код 0 – релиз уже на сервере.
+  # Быстрый отказ до сборки: блокировку не держим, её берёт серверная часть. Код 0 – релиз уже на сервере,
+  # 10 – релиза нет, нужна сборка, 75 – занято, остальные (сбой cd или открытия deploy.lock, 255 у ssh) – отказ.
   # shellcheck disable=SC2029 # переменные подставляются здесь намеренно: на сервере их нет
-  "${SSH[@]}" "$HOST" "cd '$ROOT' && exec 9>>deploy.lock && { flock -n 9 || exit 75; } && test -d releases/$sha" || rc=$?
+  "${SSH[@]}" "$HOST" "cd '$ROOT' && exec 9>>deploy.lock && { flock -n 9 || exit 75; } && { test -d releases/$sha || exit 10; }" || rc=$?
   case $rc in
     0) remote deploy "$sha" 0 < /dev/null ;;
-    1) build "$sha"; remote deploy "$sha" 1 < "$tmp/rel.tgz" ;;
+    10) build "$sha"; remote deploy "$sha" 1 < "$tmp/rel.tgz" ;;
     75) echo "Другая выкладка или откат уже идут" >&2; exit 75 ;;
     *) die "ssh завершился с кодом $rc" ;;
   esac
