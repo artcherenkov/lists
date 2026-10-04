@@ -7,7 +7,7 @@
 Работа идёт по общим навыкам `research-work` и `develop-work` и агентам `implementer`, `reviewer` и `researcher` из `~/.claude`. Крупная часть работы здесь – веха. Местные соглашения для них:
 
 - Основная ветка – `master`.
-- Документ задачи – документ вехи `docs/milestones/NN-slug.md`, например `05-data-platform.md`.
+- Документ задачи – документ вехи `docs/milestones/NN-slug.md`, например `05-data-platform.md`. У задачи вне вех – `docs/tasks/<slug>.md`, например `app-journal.md`; после приёмки с ним поступают как с документом вехи.
 - Журнал решений – раздел «Решения» плана. При закрытии вехи обновляется и раздел «Состояние работы» плана.
 - Worktree задачи – `.claude/worktrees/<имя>` от `master`. Зависимости в новом worktree – `pnpm install --frozen-lockfile --prefer-offline`.
 - Полная проверка перед слиянием – `TURBO_FORCE=true pnpm check`: без `TURBO_FORCE` кэш Turbo подменит прогон.
