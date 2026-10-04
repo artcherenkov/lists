@@ -9,10 +9,19 @@ import { installPageClock } from "./clock.ts";
 import { startAppServer, startSwitchableAppServer } from "./server.ts";
 
 export { expect };
+export { breakClipboard, mendClipboard, readClipboard } from "./clipboard.ts";
+export { escapeRegExp, journalLine } from "./journal-line.ts";
+export { openJournal } from "./journal.ts";
 export { openProfile, VERSION_FORMAT } from "./profile.ts";
 export { waitForServiceWorker } from "./service-worker.ts";
 export { centerOf, fingerTap, swipeDown } from "./swipe.ts";
-export { returnToApp } from "./visibility.ts";
+export { newVersionButton, openFirstBuildUnderWorker } from "./update.ts";
+export {
+  closeWithoutEvents,
+  moveToBackground,
+  prepareSilentClose,
+  returnToApp,
+} from "./visibility.ts";
 
 type WorkerFixtures = { server: AppServer };
 type TestFixtures = { ownAddressesOnly: void; clock: PageClock };

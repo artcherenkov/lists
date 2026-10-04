@@ -1,8 +1,9 @@
-import type { SwitchableServer } from "../../fixtures/switchable-server.ts";
 import type { Page } from "@playwright/test";
 
 import {
   expect,
+  newVersionButton,
+  openFirstBuildUnderWorker,
   openProfile,
   returnToApp,
   testWithOwnServer as test,
@@ -14,27 +15,6 @@ test.use({ serviceWorkers: "allow" });
 
 // Номер второй сборки задаёт скрипт build:next в apps/watchlist/package.json.
 const NEXT_VERSION = "2000-01-01 · 2222222";
-
-const newVersionButton = (page: Page) =>
-  page.getByRole("button", {
-    name: "Вышла новая версия Нажмите, чтобы обновить приложение",
-    exact: true,
-  });
-
-/**
- * Первая сборка открыта, worker скачал её и управляет страницей. После перезагрузки управляемой
- * страницы Chromium сам запрашивает `sw.js` через пару секунд, и если сервер к этому моменту уже
- * переключён, новая версия находится без проверки приложения. Тест дожидается запроса браузера
- * до переключения; на стороне страницы он не виден, поэтому ждёт ответа сервера.
- */
-async function openFirstBuildUnderWorker(page: Page, ownServer: SwitchableServer) {
-  await page.goto("/");
-  await waitForServiceWorker(page);
-  const browserCheck = ownServer.waitUntilServed("/sw.js");
-  await page.reload();
-  expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
-  await browserCheck;
-}
 
 async function expectVersion(page: Page, expected: string) {
   const { version } = await openProfile(page);

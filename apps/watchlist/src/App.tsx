@@ -2,6 +2,7 @@ import { ListFilters, type ListFiltersValue } from "@lists/ui/components/list-fi
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ConnectedProfileSheet } from "./connected-profile-sheet.tsx";
 import { searchSampleCatalog } from "./sample/sample-catalog.ts";
 import { useSampleList } from "./sample/use-sample-list.ts";
 import {
@@ -22,7 +23,6 @@ import {
 import { AddSheet, openAddSheet } from "./screens/add-sheet.tsx";
 import { ItemSheet } from "./screens/item-sheet.tsx";
 import { ListScreen } from "./screens/list-screen.tsx";
-import { ProfileSheet } from "./screens/profile-sheet.tsx";
 import { useServiceWorker } from "./use-service-worker.ts";
 
 // Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
@@ -106,9 +106,7 @@ export function App() {
         />
       )}
 
-      {profileOpen && (
-        <ProfileSheet version={__APP_VERSION__} onClosed={() => setProfileOpen(false)} />
-      )}
+      {profileOpen && <ConnectedProfileSheet onClosed={() => setProfileOpen(false)} />}
     </>
   );
 }

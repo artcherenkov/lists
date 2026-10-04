@@ -1,5 +1,4 @@
-import { type JournalEntry, formatCopy, formatEntryLine } from "./entries.ts";
-import { formatTime } from "./format.ts";
+import { type JournalEntry, formatCopy } from "./entries.ts";
 import {
   describeLaunch,
   describeLaunchKind,
@@ -20,24 +19,21 @@ import {
   watchRegistration,
 } from "./worker.ts";
 
-export type { JournalEntry };
-
 const storage = browserStorage();
 const store = createJournalStore(storage, Date.now);
-
-// Контракт для экрана журнала.
 
 /** Записи от старых к новым. Ссылка меняется только вместе с записями. */
 export const getJournalEntries = store.entries;
 export const subscribeJournal = store.subscribe;
 export const clearJournal = store.clear;
-export const formatJournalTime = formatTime;
-export const formatJournalLine = formatEntryLine;
 
-/** Текст для копии: первая строка со сведениями об устройстве, дальше записи по одной на строку. */
-export function journalCopyText() {
+/**
+ * Текст для копии записей `entries`: первая строка со сведениями об устройстве и временем снятия
+ * (время берётся при вызове), дальше записи по одной на строку.
+ */
+export function journalCopyText(entries: readonly JournalEntry[]) {
   const now = Date.now();
-  return formatCopy(store.entries(), {
+  return formatCopy(entries, {
     version: __APP_VERSION__,
     takenAt: now,
     offsetMinutes: -new Date(now).getTimezoneOffset(),
@@ -72,12 +68,8 @@ function navigationType() {
   return entry?.type ?? "нет данных";
 }
 
-let started = false;
-
-/** Запускает журнал один раз за страницу; вызывать до отрисовки приложения. */
+/** Запускает журнал; вызывается один раз на странице, до отрисовки приложения. */
 export function startJournal() {
-  if (started) return;
-  started = true;
   const now = Date.now();
   let movedProbeEntries = 0;
   step("перенос записей пробы", () => {
