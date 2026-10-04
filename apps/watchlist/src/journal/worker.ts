@@ -33,10 +33,12 @@ function watchWorker(registration: RegistrationLike, worker: WorkerLike, log: Lo
   worker.addEventListener("statechange", () => {
     switch (worker.state) {
       case "installed":
+        // К `installed` worker всегда лежит в `waiting`, и при первой установке тоже: новую версию
+        // от первой отличает только прежний активный worker.
         log(
-          registration.waiting === worker
+          registration.active
             ? "Новая версия установлена и ждёт включения"
-            : "Версия установлена",
+            : "Первая версия установлена",
         );
         break;
       case "activating":

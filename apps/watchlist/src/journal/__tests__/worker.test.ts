@@ -18,6 +18,19 @@ function changeState(w: FakeWorker, state: ServiceWorkerState) {
   w.dispatchEvent(new Event("statechange"));
 }
 
+// Порядок и состояние, как выставляет браузер (Service Workers, Install и Activate): к событию
+// `installed` устанавливаемый worker уже лежит в `waiting`, к `activating` он уже `active`.
+function install(reg: RegistrationLike, w: FakeWorker) {
+  Object.assign(reg, { waiting: w, installing: null });
+  changeState(w, "installed");
+}
+
+function activate(reg: RegistrationLike, w: FakeWorker) {
+  Object.assign(reg, { active: w, waiting: null });
+  changeState(w, "activating");
+  changeState(w, "activated");
+}
+
 function registration(parts: Partial<Record<"active" | "waiting" | "installing", FakeWorker>>) {
   return Object.assign(new EventTarget(), {
     active: null,
@@ -48,8 +61,7 @@ describe("watchRegistration", () => {
     const reg = registration({ active: worker("activated"), waiting });
     const lines = watch(reg);
     expect(lines).toContain("Ждущая версия уже есть при запуске");
-    changeState(waiting, "activating");
-    changeState(waiting, "activated");
+    activate(reg, waiting);
     expect(lines.slice(-2)).toEqual(["Версия включается", "Версия включилась"]);
   });
 
@@ -60,10 +72,8 @@ describe("watchRegistration", () => {
     const installing = worker("installing");
     Object.assign(reg, { installing });
     reg.dispatchEvent(new Event("updatefound"));
-    Object.assign(reg, { waiting: installing, installing: null });
-    changeState(installing, "installed");
-    changeState(installing, "activating");
-    changeState(installing, "activated");
+    install(reg, installing);
+    activate(reg, installing);
     expect(lines).toEqual([
       "Найдена новая версия (updatefound)",
       "Новая версия установлена и ждёт включения",
@@ -77,9 +87,29 @@ describe("watchRegistration", () => {
     const reg = registration({ installing });
     const lines = watch(reg);
     expect(lines).toContain("Версия устанавливается при запуске");
-    changeState(installing, "installed");
-    changeState(installing, "activated");
-    expect(lines.slice(-2)).toEqual(["Версия установлена", "Версия включилась"]);
+    install(reg, installing);
+    activate(reg, installing);
+    expect(lines.slice(-3)).toEqual([
+      "Первая версия установлена",
+      "Версия включается",
+      "Версия включилась",
+    ]);
+  });
+
+  it("первая установка после updatefound называется первой версией, а не новой, которая ждёт включения", () => {
+    const reg = registration({});
+    const lines = watch(reg);
+    const installing = worker("installing");
+    Object.assign(reg, { installing });
+    reg.dispatchEvent(new Event("updatefound"));
+    install(reg, installing);
+    activate(reg, installing);
+    expect(lines.slice(1)).toEqual([
+      "Найден первый worker (updatefound, прежнего нет)",
+      "Первая версия установлена",
+      "Версия включается",
+      "Версия включилась",
+    ]);
   });
 
   it("первый worker без прежнего называется первым", () => {
