@@ -5,6 +5,9 @@ import { createRoot } from "react-dom/client";
 
 import "./styles.css";
 import { App } from "./App.tsx";
+import { startJournal } from "./journal/journal.ts";
+
+startJournal();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

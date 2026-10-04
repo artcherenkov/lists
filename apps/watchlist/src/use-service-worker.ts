@@ -1,21 +1,23 @@
 import { useRef } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
+import { journalRegistration, journalUpdateCheck, writeJournal } from "./journal/journal.ts";
+
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const RELOAD_TIMEOUT_MS = 3000;
 
-function checkForUpdate(registration: ServiceWorkerRegistration) {
+function checkForUpdate(registration: ServiceWorkerRegistration, reason: string) {
   // Если сервер недоступен, update() отклоняется (TypeError). Это не ошибка приложения:
   // следующая проверка повторит попытку.
-  registration.update().catch(() => {});
+  journalUpdateCheck(registration, reason, () => registration.update()).catch(() => {});
 }
 
 /** Проверяет новую версию при возвращении на экран и раз в час, пока приложение открыто. */
 function watchForUpdates(registration: ServiceWorkerRegistration) {
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") checkForUpdate(registration);
+    if (document.visibilityState === "visible") checkForUpdate(registration, "возврат на экран");
   });
-  setInterval(() => checkForUpdate(registration), UPDATE_CHECK_INTERVAL_MS);
+  setInterval(() => checkForUpdate(registration, "раз в час"), UPDATE_CHECK_INTERVAL_MS);
 }
 
 /**
@@ -25,17 +27,30 @@ function watchForUpdates(registration: ServiceWorkerRegistration) {
  */
 function reloadOnNewVersion(registration: ServiceWorkerRegistration | undefined) {
   const waiting = registration?.waiting;
-  // Ждущего нет в сеансе первого открытия: новый worker включается сам, а перезагрузка
-  // дожидается его включения.
+  writeJournal(
+    `Нажато «Обновить»: ${waiting ? "ждущая версия есть" : "ждущей версии нет, страница перезагружается сразу"}`,
+  );
+  // Ждущего нет в сеансе первого открытия: новый worker включается сам, поэтому страница
+  // перезагружается сразу, не дожидаясь смены controller.
   if (!waiting) {
     location.reload();
     return;
   }
-  navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), {
-    once: true,
-  });
+  navigator.serviceWorker.addEventListener(
+    "controllerchange",
+    () => {
+      writeJournal("Сменился controller: страница перезагружается");
+      location.reload();
+    },
+    { once: true },
+  );
   waiting.postMessage({ type: "SKIP_WAITING" });
-  setTimeout(() => location.reload(), RELOAD_TIMEOUT_MS);
+  setTimeout(() => {
+    writeJournal(
+      `Прошло ${RELOAD_TIMEOUT_MS / 1000} с после «Обновить»: страница перезагружается по таймауту`,
+    );
+    location.reload();
+  }, RELOAD_TIMEOUT_MS);
 }
 
 /**
@@ -51,6 +66,7 @@ export function useServiceWorker() {
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
       registrationRef.current = registration;
+      journalRegistration(registration);
       watchForUpdates(registration);
     },
   });
