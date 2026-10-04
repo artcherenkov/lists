@@ -40,6 +40,17 @@ describe("вид запуска", () => {
     );
   });
 
+  it("страница, загруженная в фоне и выгруженная без показа: следующий запуск называет время загрузки как уход в фон", () => {
+    useMoscowTime();
+    expect(
+      describeLaunchKind({
+        previous: launchPageState("hidden", away),
+        lastRecordAt: away,
+        now: away + 4000,
+      }),
+    ).toBe("Холодный запуск: прежняя страница ушла в фон 2026-10-04 12:00:00, прошло 4 с");
+  });
+
   it("после pagehide (перезагрузка, закрытие) вид называется иначе", () => {
     useMoscowTime();
     expect(
@@ -138,7 +149,7 @@ describe("хранение состояния", () => {
 });
 
 describe("watchLifecycle", () => {
-  function setup(initial: PageState = VISIBLE_PAGE) {
+  function setup(initial: PageState = VISIBLE_PAGE, loadedHidden = false) {
     const doc = Object.assign(new EventTarget(), {
       visibilityState: "visible" as DocumentVisibilityState,
     });
@@ -152,6 +163,7 @@ describe("watchLifecycle", () => {
       now: () => now,
       log: (text) => lines.push(text),
       initial,
+      loadedHidden,
       save: (state) => saved.push(state),
     });
     return {
@@ -182,13 +194,42 @@ describe("watchLifecycle", () => {
     expect(page.saved).toEqual([{ hiddenAt: 1000, unloaded: false }, VISIBLE_PAGE]);
   });
 
-  it("страница, открытая в фоне, при показе считает фон от запуска", () => {
-    const page = setup({ hiddenAt: 0, unloaded: false });
+  it("страница, загруженная в фоне, при первом показе называет время от загрузки, а не тёплым возвратом", () => {
+    const page = setup(launchPageState("hidden", 0), true);
     page.at(61_000);
     page.visibility("visible");
     expect(page.lines).toEqual([
-      "visibilitychange: страница снова видна, тёплый возврат, в фоне 1 мин 1 с",
+      "visibilitychange: страница впервые видна, загружена в фоне 1 мин 1 с назад",
     ]);
+    expect(page.saved).toEqual([VISIBLE_PAGE]);
+  });
+
+  it("страница, загруженная в фоне: после первого показа возврат из фона снова тёплый", () => {
+    const page = setup(launchPageState("hidden", 0), true);
+    page.at(5000);
+    page.visibility("visible");
+    page.at(6000);
+    page.visibility("hidden");
+    page.at(9000);
+    page.visibility("visible");
+    expect(page.lines.at(-1)).toBe(
+      "visibilitychange: страница снова видна, тёплый возврат, в фоне 3 с",
+    );
+  });
+
+  it("страница, загруженная в фоне и ушедшая в кеш переходов: возврат из него тоже кончает первый показ", () => {
+    const page = setup(launchPageState("hidden", 0), true);
+    page.at(1000);
+    page.hide(true);
+    page.at(5000);
+    page.show(true);
+    page.at(6000);
+    page.visibility("hidden");
+    page.at(9000);
+    page.visibility("visible");
+    expect(page.lines.at(-1)).toBe(
+      "visibilitychange: страница снова видна, тёплый возврат, в фоне 3 с",
+    );
   });
 
   it("показ без предшествующего ухода не называет длительность", () => {

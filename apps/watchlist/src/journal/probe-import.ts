@@ -3,8 +3,17 @@ import type { JournalStore } from "./store.ts";
 import { parseProbeLog } from "./entries.ts";
 import { type KeyValueStorage, readText, removeKey } from "./storage.ts";
 
-// TODO: удалить этот файл, `parseProbeLog` в `entries.ts` и вызов в `journal.ts`, когда продуктовая
-// версия хотя бы раз запустится на телефоне автора: записи пробы есть только там.
+// TODO: удалить, когда продуктовая версия хотя бы раз запустится на телефоне автора: записи пробы
+// есть только там. Вместе с этим файлом и `probe-import.test.ts` уходят:
+// - `parseProbeLog` в `entries.ts` и его тесты в `entries.test.ts`;
+// - `JournalStore.prepend` в `store.ts` и `prependEntries` в `entries.ts` с тестами в
+//   `entries.test.ts`, а в `store.test.ts` – вызовы `prepend` в тестах «очистка и перенос…» и
+//   «подписчик…»: больше никто не ставит записи в начало;
+// - шаг «перенос записей пробы», `movedProbeEntries`, запись «Перенесены записи пробы» и пометка
+//   «после переноса пробы» у `lastRecordAt` в `journal.ts`;
+// - e2e «записи пробы» в `tests/e2e/app/journal.spec.ts`, строки «проба» и «Перенесены записи
+//   пробы» в `stories/sample-journal.ts`, упоминания в `docs/testing.md`.
+// Запись «Запуск без записанного ухода в фон» остаётся: она нужна и без пробы.
 const PROBE_LOG_KEY = "probe-log";
 const PROBE_KEYS = [PROBE_LOG_KEY, "probe-state", "probe-marker-seen"];
 

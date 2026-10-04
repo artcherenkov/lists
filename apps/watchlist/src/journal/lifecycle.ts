@@ -30,8 +30,21 @@ export function pageShown(state: PageState, now: number) {
   };
 }
 
+/**
+ * Состояние страницы на запуске. Страница, загруженная в фоне, получает `hiddenAt` от запуска: если
+ * система выгрузит её, не показав, следующий запуск назовёт время ухода из виду.
+ */
 export function launchPageState(visibility: DocumentVisibilityState, now: number): PageState {
   return visibility === "hidden" ? { hiddenAt: now, unloaded: false } : VISIBLE_PAGE;
+}
+
+/** Строка о том, что страница стала видна; `loadedHidden` – она загружена в фоне и ещё не была видна. */
+function describeVisible(args: { backgroundMs: number | undefined; loadedHidden: boolean }) {
+  const { backgroundMs, loadedHidden } = args;
+  if (backgroundMs === undefined) return "visibilitychange: страница видна";
+  return loadedHidden
+    ? `visibilitychange: страница впервые видна, загружена в фоне ${formatDuration(backgroundMs)} назад`
+    : `visibilitychange: страница снова видна, тёплый возврат, в фоне ${formatDuration(backgroundMs)}`;
 }
 
 /**
@@ -97,6 +110,8 @@ export interface LifecycleDeps {
   now: () => number;
   log: Log;
   initial: PageState;
+  /** Страница загружена в фоне и ещё ни разу не была видна: её первый показ не возврат. */
+  loadedHidden: boolean;
   save: (state: PageState) => void;
 }
 
@@ -104,6 +119,7 @@ export interface LifecycleDeps {
 export function watchLifecycle(deps: LifecycleDeps) {
   const { doc, win, now, log, save } = deps;
   let state = deps.initial;
+  let loadedHidden = deps.loadedHidden;
   const update = (next: PageState) => {
     state = next;
     save(next);
@@ -116,11 +132,8 @@ export function watchLifecycle(deps: LifecycleDeps) {
       return;
     }
     const shown = pageShown(state, now());
-    log(
-      shown.backgroundMs === undefined
-        ? "visibilitychange: страница видна"
-        : `visibilitychange: страница снова видна, тёплый возврат, в фоне ${formatDuration(shown.backgroundMs)}`,
-    );
+    log(describeVisible({ backgroundMs: shown.backgroundMs, loadedHidden }));
+    loadedHidden = false;
     update(shown.state);
   });
 
@@ -135,6 +148,7 @@ export function watchLifecycle(deps: LifecycleDeps) {
     log(
       `pageshow, persisted=true${shown.backgroundMs === undefined ? "" : `, в фоне ${formatDuration(shown.backgroundMs)}`}`,
     );
+    loadedHidden = false;
     update(shown.state);
   });
 

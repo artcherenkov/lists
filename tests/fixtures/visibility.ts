@@ -24,6 +24,24 @@ export async function moveToBackground(page: Page): Promise<void> {
 }
 
 /**
+ * Страницы контекста загружаются скрытыми, как вкладка, открытая в фоне: `document.visibilityState`
+ * равен `hidden` до кода приложения. Вызывать до первой загрузки; страницу показывает `showApp`.
+ */
+export async function prepareHiddenLaunch(context: BrowserContext): Promise<void> {
+  await context.addInitScript(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+  });
+}
+
+/** Скрытая страница становится видимой, возвращения из фона перед этим нет. Подменяется платформа, как в `returnToApp`. */
+export async function showApp(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+}
+
+/**
  * Готовит контекст к `closeWithoutEvents`: перехватчики событий страницы ставятся до кода
  * приложения, иначе его собственные слушатели сработают раньше. Вызывать до первой загрузки.
  */

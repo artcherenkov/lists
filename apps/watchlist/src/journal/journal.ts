@@ -51,11 +51,7 @@ function step(name: string, run: () => void) {
   try {
     run();
   } catch (error) {
-    try {
-      writeJournal(`Сбой журнала на шаге «${name}»: ${String(error)}`);
-    } catch {
-      // Писать некуда.
-    }
+    writeJournal(`Сбой журнала на шаге «${name}»: ${String(error)}`);
   }
 }
 
@@ -101,6 +97,7 @@ export function startJournal() {
       now: Date.now,
       log: writeJournal,
       initial,
+      loadedHidden: document.visibilityState === "hidden",
       save: (state) => writePageState(storage, state),
     });
   });
@@ -113,7 +110,7 @@ export function startJournal() {
       storage: navigator.storage,
       homeScreen: isHomeScreen(),
       log: writeJournal,
-    }).catch((error: unknown) => writeJournal(`Сбой журнала на шаге «persist»: ${String(error)}`));
+    });
   });
 }
 

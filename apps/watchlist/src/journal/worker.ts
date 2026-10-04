@@ -50,8 +50,6 @@ function watchWorker(registration: RegistrationLike, worker: WorkerLike, log: Lo
       case "redundant":
         log("Версия отброшена (redundant)");
         break;
-      default:
-        break;
     }
   });
 }

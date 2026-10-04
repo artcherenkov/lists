@@ -19,14 +19,7 @@ test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
 /** Журнал, в котором записей больше, чем влезает в шторку: каждый возврат пишет две строки. */
 async function fillJournal(page: Page) {
-  await page.evaluate(() => {
-    for (let i = 0; i < 40; i++) {
-      for (const state of ["hidden", "visible"] as const) {
-        Object.defineProperty(document, "visibilityState", { configurable: true, value: state });
-        document.dispatchEvent(new Event("visibilitychange"));
-      }
-    }
-  });
+  for (let i = 0; i < 40; i++) await returnToApp(page);
 }
 
 /** Текст, который человек получил бы, выделив все записи журнала пальцем или мышью. */
@@ -165,6 +158,24 @@ for (const how of ["refuses", "missing"] as const) {
   });
 }
 
+test("буфер обмена недоступен, а человек уже выделил часть текста: «Скопировать журнал» выделяет весь журнал", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const { sheet, log } = await openJournal(page);
+  await expect(sheet.getByText(journalLine(/persist\(\)/))).toBeVisible();
+  await log.getByText(journalLine(/Запуск: версия /)).dblclick();
+  const partial = await selectedText(page);
+  expect(partial).toMatch(/\S/);
+  expect(partial).not.toBe(await log.innerText());
+  await breakClipboard(page, "refuses");
+
+  await sheet.getByRole("button", { name: "Скопировать журнал" }).click();
+
+  await expect(sheet.getByText(COPY_FAILED_NOTE, { exact: true })).toBeVisible();
+  expect(await selectedText(page)).toBe(await log.innerText());
+});
+
 test("повторное копирование продлевает надпись «Скопировано · N» на 2,5 с от последнего нажатия", async ({
   page,
   clock,
@@ -276,6 +287,28 @@ test("после «Очистить» на кнопке копирования �
   await sheet.getByRole("button", { name: "Точно?" }).click();
 
   await expect(sheet.getByRole("button", { name: "Скопировать журнал" })).toBeDisabled();
+});
+
+test("после «Очистить» новая запись не оставляет на кнопке «Точно?»: следующее нажатие снова только просит подтвердить", async ({
+  page,
+  clock,
+}) => {
+  await page.goto("/");
+  const { sheet, log } = await openJournal(page);
+  await expect(sheet.getByText(journalLine(/persist\(\)/))).toBeVisible();
+  // Часы стоят: таймер первого нажатия не успеет сам вернуть надпись.
+  await clock.freeze();
+  await sheet.getByRole("button", { name: "Очистить" }).click();
+  await sheet.getByRole("button", { name: "Точно?" }).click();
+  await expect(sheet.getByText("Записей пока нет", { exact: true })).toBeVisible();
+
+  await returnToApp(page);
+
+  await expect(log.getByText(journalLine(WARM_RETURN))).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Очистить" })).toBeEnabled();
+  await sheet.getByRole("button", { name: "Очистить" }).click();
+  await expect(sheet.getByRole("button", { name: "Точно?" })).toBeVisible();
+  await expect(log.getByText(journalLine(WARM_RETURN))).toBeVisible();
 });
 
 test("«Очистить» без второго нажатия через 3,5 с возвращает надпись, и следующее нажатие снова только просит подтвердить", async ({

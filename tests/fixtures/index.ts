@@ -10,7 +10,7 @@ import { startAppServer, startSwitchableAppServer } from "./server.ts";
 
 export { expect };
 export { breakClipboard, mendClipboard, readClipboard } from "./clipboard.ts";
-export { escapeRegExp, journalLine } from "./journal-line.ts";
+export { escapeRegExp, journalLine, TIME_FORMAT } from "./journal-line.ts";
 export { openJournal } from "./journal.ts";
 export { openProfile, VERSION_FORMAT } from "./profile.ts";
 export { waitForServiceWorker } from "./service-worker.ts";
@@ -19,8 +19,10 @@ export { newVersionButton, openFirstBuildUnderWorker } from "./update.ts";
 export {
   closeWithoutEvents,
   moveToBackground,
+  prepareHiddenLaunch,
   prepareSilentClose,
   returnToApp,
+  showApp,
 } from "./visibility.ts";
 
 type WorkerFixtures = { server: AppServer };

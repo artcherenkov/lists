@@ -62,7 +62,6 @@ export function JournalLog({
         <p className="py-12 text-center text-sm text-muted-foreground">Записей пока нет</p>
       ) : (
         <div className="font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap select-text">
-          {/* Висячий отступ: перенесённая строка не сливается со следующей записью. */}
           <div className="pb-1 pl-4 -indent-4 text-muted-foreground">{header}</div>
           {lines.map((line, index) => (
             <div key={index} className="pl-4 -indent-4">

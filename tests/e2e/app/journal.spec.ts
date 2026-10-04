@@ -8,8 +8,11 @@ import {
   openFirstBuildUnderWorker,
   openJournal,
   openProfile,
+  prepareHiddenLaunch,
   prepareSilentClose,
   returnToApp,
+  showApp,
+  TIME_FORMAT,
   testWithOwnServer as test,
   waitForServiceWorker,
 } from "../../fixtures/index.ts";
@@ -88,7 +91,6 @@ test.describe("запуск и возвраты", () => {
     page,
     context,
   }) => {
-    const TIME = String.raw`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`;
     await prepareSilentClose(context);
     await page.goto("/");
     await moveToBackground(page);
@@ -100,7 +102,7 @@ test.describe("запуск и возвраты", () => {
     await expect(
       coldLog.getByText(
         journalLine(
-          new RegExp(`Холодный запуск: прежняя страница ушла в фон ${TIME}, прошло \\d+ с$`),
+          new RegExp(`Холодный запуск: прежняя страница ушла в фон ${TIME_FORMAT}, прошло \\d+ с$`),
         ),
       ),
     ).toBeVisible();
@@ -113,7 +115,7 @@ test.describe("запуск и возвраты", () => {
       log.getByText(
         journalLine(
           new RegExp(
-            `Запуск без записанного ухода в фон: прежняя страница ухода не записала, её последняя запись ${TIME}, прошло \\d+ с$`,
+            `Запуск без записанного ухода в фон: прежняя страница ухода не записала, её последняя запись ${TIME_FORMAT}, прошло \\d+ с$`,
           ),
         ),
       ),
@@ -145,11 +147,74 @@ test.describe("запуск и возвраты", () => {
       await expect(
         sheet.getByText(
           journalLine(
-            /Запуск после закрытия или перезагрузки страницы \(pagehide\): прежняя страница ушла из виду \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}, прошло \d+ с$/,
+            new RegExp(
+              `Запуск после закрытия или перезагрузки страницы \\(pagehide\\): прежняя страница ушла из виду ${TIME_FORMAT}, прошло \\d+ с$`,
+            ),
           ),
         ),
       ).toBeVisible();
     });
+  });
+
+  test("страница, загруженная в фоне, при первом показе названа впервые видной, а не тёплым возвратом", async ({
+    page,
+    context,
+  }) => {
+    await prepareHiddenLaunch(context);
+    await page.goto("/");
+
+    await showApp(page);
+
+    const { sheet } = await openJournal(page);
+    await expect(
+      sheet.getByText(journalLine(/Запуск: версия .+, видимость hidden, с экрана «Домой»: нет$/)),
+    ).toBeVisible();
+    await expect(
+      sheet.getByText(
+        journalLine(/visibilitychange: страница впервые видна, загружена в фоне \d+ с назад$/),
+      ),
+    ).toBeVisible();
+    await expect(sheet.getByText(journalLine(/тёплый возврат/))).toHaveCount(0);
+  });
+
+  test("платформа без service worker, как небезопасный контекст: об этом запись в журнале, приложение открывается", async ({
+    page,
+    context,
+  }) => {
+    // Подменяется платформа: свойства `navigator.serviceWorker` нет вовсе, как по http.
+    await context.addInitScript(() => {
+      Reflect.deleteProperty(Navigator.prototype, "serviceWorker");
+    });
+    await page.goto("/");
+    expect(await page.evaluate(() => "serviceWorker" in navigator)).toBe(false);
+
+    const { sheet } = await openJournal(page);
+
+    await expect(sheet.getByText(journalLine("serviceWorker недоступен"))).toBeVisible();
+  });
+});
+
+test.describe("сбой журнала", () => {
+  test("сбой шага запуска записан в журнал, остальные шаги выполнены, приложение открывается", async ({
+    page,
+    context,
+  }) => {
+    // Подменяется платформа: окружение без Navigation Timing, как старый встроенный браузер.
+    await context.addInitScript(() => {
+      performance.getEntriesByType = () => {
+        throw new Error("Navigation Timing недоступен");
+      };
+    });
+    await page.goto("/");
+
+    const { sheet } = await openJournal(page);
+
+    await expect(
+      sheet.getByText(
+        journalLine("Сбой журнала на шаге «запуск»: Error: Navigation Timing недоступен"),
+      ),
+    ).toBeVisible();
+    await expect(sheet.getByText(journalLine(/controller при запуске: /))).toBeVisible();
   });
 });
 

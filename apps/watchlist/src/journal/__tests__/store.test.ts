@@ -77,11 +77,28 @@ describe("сбой хранилища", () => {
     expect(store.entries().map((x) => x.text)).toEqual(["первая", "вторая"]);
   });
 
-  it("квота исчерпана: запись не бросает, прежние записи остаются", () => {
+  it("квота исчерпана: запись не бросает, прежние записи остаются, новые не вытесняют друг друга", () => {
     const stored = JSON.stringify([{ t: 1, text: "прежняя" }]);
     const store = createJournalStore(fullStorage({ [JOURNAL_KEY]: stored }), () => 2);
-    expect(() => store.append("новая")).not.toThrow();
-    expect(store.entries().map((x) => x.text)).toEqual(["прежняя", "новая"]);
+    expect(() => store.append("новая 1")).not.toThrow();
+    store.append("новая 2");
+    expect(store.entries().map((x) => x.text)).toEqual(["прежняя", "новая 1", "новая 2"]);
+  });
+
+  it("квота исчерпана, ключа в хранилище ещё нет: записи живут в памяти", () => {
+    const store = createJournalStore(fullStorage(), () => 1);
+    store.append("первая");
+    store.append("вторая");
+    expect(store.entries().map((x) => x.text)).toEqual(["первая", "вторая"]);
+  });
+
+  it("очистка удалась, а запись после неё нет (квота): две записи подряд обе остаются в памяти", () => {
+    const stored = JSON.stringify([{ t: 1, text: "прежняя" }]);
+    const store = createJournalStore(fullStorage({ [JOURNAL_KEY]: stored }), () => 2);
+    store.clear();
+    store.append("новая 1");
+    store.append("новая 2");
+    expect(store.entries().map((x) => x.text)).toEqual(["новая 1", "новая 2"]);
   });
 
   it("запись удалась, следующая нет: удавшаяся запись остаётся подтверждённой, новая живёт в памяти", () => {
@@ -168,15 +185,6 @@ describe("очистка и подписка", () => {
     expect(() => store.prepend([{ t: 0, text: "старая" }])).not.toThrow();
     expect(() => store.clear()).not.toThrow();
     expect(reached).toBe(3);
-  });
-
-  it("очистка при отказе удаления ключа не возвращает стёртые записи", () => {
-    const stored = JSON.stringify([{ t: 1, text: "прежняя" }]);
-    const storage = { ...memoryStorage({ [JOURNAL_KEY]: stored }), removeItem: () => {} };
-    const store = createJournalStore(storage, () => 2);
-    store.clear();
-    store.append("новая");
-    expect(store.entries().map((x) => x.text)).toEqual(["новая"]);
   });
 
   it("ссылка на записи не меняется, пока записей не прибавилось", () => {
