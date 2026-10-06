@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src", "shared", "server", "tests", "ps", "vite*.config.ts", "playwright.config.ts"],
+  "exclude": ["src/sw.ts", "ps/src/sw.ts"]
+}

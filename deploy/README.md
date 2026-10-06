@@ -131,3 +131,7 @@ ssh lists 'docker compose version'
 ```
 
 После обновления выложить текущий коммит: `pnpm deploy:v2` – это `compose up` новой версией и проверка сайта.
+
+## Макет платформы данных (ветка `proto/m5-iphone`)
+
+Только на этой ветке, в `master` не идёт. Релиз содержит не Watchlist, а макет `apps/m5-own`: `site/` – макет Dexie и страница PowerSync под `/ps/`, `server/` – бандл сервера одним файлом (`index.mjs` и `schema.sql`). Сервисы `m5-postgres` и `m5-server` в `compose.yaml` читают `/opt/lists/m5.env`: `POSTGRES_PASSWORD`, `DATABASE_URL`, `LAB_KEY` (ключ входа), `LAB_UNTIL` (срок макета, дата ISO; после него выдача токена отвечает 410). Файл создаёт автор до первой выкладки: без него `docker compose` не загрузит файл и `caddy validate` в `deploy.sh` упадёт. `m5-server` читает бандл из `/srv/current`, поэтому смена релиза пересоздаёт его (метка `lists.release` в `compose.yaml` подставляется при сборке), а при старте он сам переводит базу на версию данных релиза и не включается, если база новее релиза. `/admin/*` Caddy отвечает 404, `/api/*` проксирует на `m5-server:13400`.

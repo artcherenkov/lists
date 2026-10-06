@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#c2410c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Макет Dexie" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Макет Dexie</title>
+    <link rel="stylesheet" href="/src/lab.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Макет Dexie · <span id="label"></span></h1>
+      <div id="build"></div>
+      <button id="update" hidden>Вышла новая версия – обновить</button>
+      <div id="blocked" hidden></div>
+    </header>
+    <form id="key-form" hidden>
+      <label
+        >Ключ макета <input id="key" type="password" autocomplete="off" autocapitalize="off"
+      /></label>
+      <button type="submit">Сохранить</button>
+      <div id="key-note"></div>
+    </form>
+    <section>
+      <p id="status"></p>
+      <p id="sync"></p>
+      <p id="check"></p>
+      <div class="row">
+        <button id="add">+ запись</button>
+        <button id="rate">оценка последней</button>
+        <button id="kick">синхронизировать</button>
+      </div>
+      <ul id="list"></ul>
+    </section>
+    <section>
+      <h2>Журнал хранилища</h2>
+      <div class="row">
+        <button id="copy">скопировать</button>
+        <button id="clear">очистить</button>
+        <a href="/ps/">страница PowerSync</a>
+      </div>
+      <pre id="journal"></pre>
+    </section>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

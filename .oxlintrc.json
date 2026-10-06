@@ -9,6 +9,10 @@
   },
   "overrides": [
     {
+      "files": ["apps/m5-own/tests/**"],
+      "rules": { "no-empty-pattern": "off" }
+    },
+    {
       "files": ["apps/*/src/**", "packages/*/src/**"],
       "rules": {
         "no-restricted-imports": [
@@ -25,5 +29,12 @@
       }
     }
   ],
-  "ignorePatterns": ["dist/**", "dist-next/**", "coverage/**"]
+  "ignorePatterns": [
+    "dist/**",
+    "dist-next/**",
+    "dist-ps/**",
+    "dist-server/**",
+    "dist-test/**",
+    "coverage/**"
+  ]
 }
