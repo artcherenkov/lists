@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" href="/ps/favicon.png" />
+    <link rel="apple-touch-icon" href="/ps/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1e40af" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Макет PS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Макет PowerSync</title>
+    <link rel="stylesheet" href="../src/lab.css" />
+    <style>
+      h1 {
+        color: #3b82f6;
+      }
+      button {
+        background: #1d4ed8;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Макет PowerSync · хранилище</h1>
+      <div id="build"></div>
+      <button id="update" hidden>Вышла новая версия – обновить</button>
+    </header>
+    <section>
+      <p id="status"></p>
+      <p id="check"></p>
+      <div class="row">
+        <label
+          >Хранилище
+          <select id="vfs"></select
+        ></label>
+      </div>
+      <div class="row">
+        <button id="add">+ строка</button>
+        <button id="add10">10 строк подряд</button>
+      </div>
+      <ul id="list"></ul>
+    </section>
+    <section>
+      <h2>Журнал хранилища</h2>
+      <div class="row">
+        <button id="copy">скопировать</button>
+        <button id="clear">очистить</button>
+        <a href="/">макет Dexie</a>
+      </div>
+      <pre id="journal"></pre>
+    </section>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

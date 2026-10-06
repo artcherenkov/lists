@@ -47,20 +47,27 @@ remote() {
   return "$rc"
 }
 
-build() { # коммит -> $tmp/rel.tgz: site/, Caddyfile, compose.yaml, SHA256SUMS
+build() { # коммит -> $tmp/rel.tgz: site/, server/, Caddyfile, compose.yaml, SHA256SUMS
   tmp=$(mktemp -d)
   git worktree add -q --detach "$tmp/wt" "$1"
   (
     cd "$tmp/wt"
     unset APP_VERSION # номер версии должен называть коммит
     pnpm install --frozen-lockfile --prefer-offline
-    pnpm --filter watchlist build
+    pnpm --filter m5-own build
+    pnpm --filter m5-own build:server
   )
   mkdir "$tmp/rel"
-  cp -R "$tmp/wt/apps/watchlist/dist" "$tmp/rel/site"
-  cp "$tmp/wt/deploy/Caddyfile" "$tmp/wt/deploy/compose.yaml" "$tmp/rel/"
+  # Ветка макета: в релиз идут макет (со страницей PowerSync под /ps/) и бандл сервера, а не Watchlist.
+  cp -R "$tmp/wt/apps/m5-own/dist" "$tmp/rel/site"
+  cp -R "$tmp/wt/apps/m5-own/dist-server" "$tmp/rel/server"
+  cp "$tmp/wt/deploy/Caddyfile" "$tmp/rel/"
+  # Метка релиза в compose: смена коммита пересоздаёт m5-server, и он читает бандл нового релиза.
+  sed "s/lists.release: \"dev\"/lists.release: \"$1\"/" "$tmp/wt/deploy/compose.yaml" > "$tmp/rel/compose.yaml"
+  grep -q "lists.release: \"$1\"" "$tmp/rel/compose.yaml" || die "В compose.yaml нет метки релиза"
   [ -f "$tmp/rel/site/index.html" ] || die "В сборке нет index.html"
-  (cd "$tmp/rel" && find site -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS)
+  [ -f "$tmp/rel/server/index.mjs" ] && [ -f "$tmp/rel/server/schema.sql" ] || die "В сборке нет бандла сервера"
+  (cd "$tmp/rel" && find site server -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS)
   # bsdtar с macOS иначе кладёт в архив ._* и LIBARCHIVE.xattr.*
   COPYFILE_DISABLE=1 tar --no-xattrs -czf "$tmp/rel.tgz" -C "$tmp/rel" .
 }

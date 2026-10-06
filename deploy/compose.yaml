@@ -10,6 +10,7 @@ services:
     # Наружу сайт отдаёт общий прокси сервера (проект ingress): он читает метки и сам держит сертификат
     networks:
       - ingress
+      - default
     labels:
       caddy: v2.watchlist.acherenkov.com
       caddy.reverse_proxy: "{{upstreams 80}}"
@@ -27,6 +28,79 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # Макет платформы данных (ветка proto/m5-iphone): Postgres и сервер своего движка. Порты наружу не публикуются,
+  # Caddy ходит к серверу по имени сервиса. Секреты и срок макета – в /opt/lists/m5.env (создаёт автор вручную).
+  m5-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    mem_limit: 192m
+    memswap_limit: 192m
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=30
+    environment:
+      POSTGRES_DB: app
+    env_file: /opt/lists/m5.env
+    volumes:
+      - m5-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  m5-server:
+    image: node:24-alpine
+    restart: unless-stopped
+    init: true
+    mem_limit: 192m
+    memswap_limit: 192m
+    # Бандл – из релиза: /opt/lists смонтирован целиком, current разворачивается при старте контейнера.
+    command: ["node", "--max-old-space-size=128", "/srv/current/server/index.mjs"]
+    volumes:
+      - /opt/lists:/srv:ro
+    env_file: /opt/lists/m5.env
+    environment:
+      LISTEN_HOST: 0.0.0.0
+      PORT: "13400"
+      LAB_USERS: lab
+    # Меняется с каждым релизом (подставляет deploy.sh): compose пересоздаёт сервер, и он читает бандл нового релиза.
+    labels:
+      lists.release: "dev"
+    depends_on:
+      m5-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:13400/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  m5-pgdata:
+
 networks:
   ingress:
     external: true
+  # Своя сеть проекта: по ней Caddy ходит к серверу макета, а Postgres и сервер не видны соседям по ingress
+  default:

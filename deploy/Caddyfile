@@ -8,12 +8,18 @@
 		output stdout
 	}
 
-	handle /api/* {
+	# Макет платформы данных: /admin/* (управление стендом тестов) снаружи закрыт, /api/* – сервер макета.
+	handle /admin/* {
 		respond 404
 	}
 
+	handle /api/* {
+		header Cache-Control "no-store"
+		reverse_proxy m5-server:13400
+	}
+
 	handle {
-		@revalidate not path /assets/*
+		@revalidate not path /assets/* /ps/assets/*
 		request_header @revalidate -If-None-Match
 		request_header @revalidate -If-Modified-Since
 		header @revalidate {
@@ -21,7 +27,8 @@
 			-ETag
 			-Last-Modified
 		}
-		header /assets/* {
+		@immutable path /assets/* /ps/assets/*
+		header @immutable {
 			Cache-Control "public, max-age=31536000, immutable"
 			match status 2xx
 		}
