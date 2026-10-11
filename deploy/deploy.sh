@@ -1,5 +1,5 @@
 #!/bin/bash
-# Выкладка Watchlist v2 на cora: сборка коммита здесь, остальное – одним сеансом ssh (remote.sh).
+# Выкладка Watchlist v2 на сервер lists: сборка коммита здесь, остальное – одним сеансом ssh (remote.sh).
 # Использование: /bin/bash deploy/deploy.sh deploy [коммит] | rollback
 # Работает на macOS /bin/bash 3.2: без ассоциативных массивов, mapfile и ${x,,}.
 set -euo pipefail

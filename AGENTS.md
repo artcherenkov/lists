@@ -37,12 +37,12 @@
 - `pnpm storybook` – Storybook на `http://localhost:6006`.
 - `pnpm check` – все проверки (перед слиянием – с `TURBO_FORCE=true`, см. «Порядок работы»): `fmt:check`, `lint` (oxlint и `shellcheck` по `deploy/*.sh`), `check-types`, сборка Storybook, unit и e2e. Перед push хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types` и unit – без сборки Storybook и e2e.
 - `pnpm test:unit` – Vitest. `pnpm test:e2e` – сборка приложения и Playwright на ней. Перед написанием тестов прочитай [docs/testing.md](docs/testing.md).
-- `pnpm deploy:v2 [коммит]` – выкладка коммита (по умолчанию `HEAD`) на `https://v2.watchlist.acherenkov.com`; на `cora` выкладываем только ею. `pnpm rollback:v2` – откат на прежний релиз, повторный откат отменяет первый. `bash deploy/setup-server.sh` – первичная настройка `cora`. Устройство сервера, проверки и защиты выкладки, блокировка, прерывание, журнал выкладки, удаление старых релизов и ручные действия на сервере – в [deploy/README.md](deploy/README.md).
+- `pnpm deploy:v2 [коммит]` – выкладка коммита (по умолчанию `HEAD`) на `https://v2.watchlist.acherenkov.com`; на `lists` выкладываем только ею. `pnpm rollback:v2` – откат на прежний релиз, повторный откат отменяет первый. Устройство сервера, проверки и защиты выкладки, блокировка, прерывание, журнал выкладки, удаление старых релизов и ручные действия на сервере – в [deploy/README.md](deploy/README.md).
 - `pnpm fmt` – форматирование oxfmt. Из него исключены сгенерированное (`packages/ui/src/components/ui/**`, `pnpm-lock.yaml`) и файлы, которые ведёт оркестратор вручную: `docs/plan.md`, `docs/milestones/**`, `.claude/**`.
 - Компоненты shadcn, пресет и Storybook – в [docs/ui.md](docs/ui.md): прочитай перед работой с интерфейсом.
 - Markdown пишем без переносов внутри абзаца: абзац и пункт списка – одна строка, переносит окно. В форматируемых файлах oxfmt разворачивает переносы сам (`proseWrap: never`), в исключённых – следи за этим сам.
 
 ## Серверы
 
-- `cora` (`ssh cora-selectel` или `ssh lists`) – сервер списков, подробности – в плане, раздел «Сервер». Действия на нём – только по поручению автора. Том `caddy_data` с сертификатами не удаляй (`docker compose down -v`, `docker volume rm`): Let's Encrypt выдаёт не больше 5 одинаковых сертификатов в неделю.
-- `viola-selectel` и `hope-vdsina` – рабочие серверы текущих приложений и прокси. К ним не подключайся.
+- `lists` (`ssh lists`, `135.106.221.118`) – сервер списков, подробности – в плане, раздел «Сервер». На нём же работают текущие Watchlist и Readlist и `abc-cloud`: их контейнеры, тома и каталоги не трогай. Действия на сервере – только по поручению автора. Том `ingress_caddy_data` с сертификатами не удаляй (`docker compose down -v`, `docker volume rm`): Let's Encrypt выдаёт не больше 5 одинаковых сертификатов в неделю.
+- `hope-vdsina` – рабочий сервер прокси текущих приложений. К нему не подключайся.

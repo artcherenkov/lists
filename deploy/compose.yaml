@@ -4,15 +4,17 @@ services:
   caddy:
     image: caddy:2.11.4-alpine
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
     command: caddy run --config /srv/current/Caddyfile --adapter caddyfile
     volumes:
       - /opt/lists:/srv:ro
-      - caddy_data:/data
-      - caddy_config:/config
+    # Наружу сайт отдаёт общий прокси сервера (проект ingress): он читает метки и сам держит сертификат
+    networks:
+      - ingress
+    labels:
+      caddy: v2.watchlist.acherenkov.com
+      caddy.reverse_proxy: "{{upstreams 80}}"
+    mem_limit: 64m
+    memswap_limit: 64m
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
       interval: 10s
@@ -25,6 +27,6 @@ services:
         max-size: "10m"
         max-file: "5"
 
-volumes:
-  caddy_data:
-  caddy_config:
+networks:
+  ingress:
+    external: true
