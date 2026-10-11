@@ -11,7 +11,7 @@
     "build-storybook": "turbo build-storybook",
     "check": "pnpm fmt:check && pnpm lint && pnpm check-types && pnpm build-storybook && pnpm test",
     "lint": "oxlint && pnpm lint:shell",
-    "lint:shell": "command -v shellcheck >/dev/null || { echo 'shellcheck не найден: brew install shellcheck' >&2; exit 1; }; shellcheck deploy/*.sh",
+    "lint:shell": "command -v shellcheck >/dev/null || { echo 'shellcheck не найден: brew install shellcheck' >&2; exit 1; }; shellcheck deploy/*.sh deploy/ingress/*.sh",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "test:unit": "vitest run",

@@ -6,7 +6,7 @@
 
 ## Где что лежит
 
-- Unit: `apps/*/src/**/__tests__/*.test.ts(x)`, `packages/*/src/**/__tests__/*.test.ts(x)` и `tests/fixtures/**/__tests__/*.test.ts` – последние проверяют сами помощники тестов. Вычисления конфига сборки проверяет `apps/*/build/**/__tests__/*.test.ts`: им нужен Node, поэтому они не в `src`, откуда код уходит в браузер. Скрипт выкладки `deploy/*.sh` unit не проверяет: его проверяют прогон на `cora` и `shellcheck`, см. [deploy/README.md](../deploy/README.md#выкладка). Конфиг один – `vitest.config.ts` в корне.
+- Unit: `apps/*/src/**/__tests__/*.test.ts(x)`, `packages/*/src/**/__tests__/*.test.ts(x)` и `tests/fixtures/**/__tests__/*.test.ts` – последние проверяют сами помощники тестов. Вычисления конфига сборки проверяет `apps/*/build/**/__tests__/*.test.ts`: им нужен Node, поэтому они не в `src`, откуда код уходит в браузер. Скрипт выкладки `deploy/*.sh` unit не проверяет: его проверяют прогон на сервере `lists` и `shellcheck`, см. [deploy/README.md](../deploy/README.md#выкладка). Конфиг один – `vitest.config.ts` в корне.
 - E2E: `tests/e2e/<область>/<имя>.spec.ts`. Конфиг один – `playwright.config.ts`. Устройство – Chromium с размерами и касаниями iPhone (393×852, `isMobile`, `hasTouch`, `deviceScaleFactor: 3`, язык `ru-RU`).
 - Кирпичики – `tests/fixtures`. Новый кирпичик добавляем туда же, отдельных наборов и конфигов не заводим: по набору тестов должно быть видно, что в нём настоящее, а что подменено.
 

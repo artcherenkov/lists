@@ -1,0 +1,34 @@
+# Входной прокси сервера: принимает 80/443, выпускает сертификаты и ведёт запросы
+# к приложениям по их меткам. О приложениях заранее не знает – читает метки через Docker.
+name: ingress
+
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:2.13-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443/tcp"
+      - "443:443/udp"
+    environment:
+      # Адреса приложений берутся только из этой сети
+      CADDY_INGRESS_NETWORKS: ingress
+    networks:
+      - ingress
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
+networks:
+  ingress:
+    # Имя фиксировано: приложения подключаются к нему как к внешней сети
+    name: ingress
+
+volumes:
+  caddy_data:
+  caddy_config:

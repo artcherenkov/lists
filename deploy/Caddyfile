@@ -1,4 +1,4 @@
-v2.watchlist.acherenkov.com {
+:80 {
 	root * /srv/current/site
 	encode zstd gzip
 
