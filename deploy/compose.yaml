@@ -29,12 +29,13 @@ services:
         max-file: "5"
 
   # Макет платформы данных (ветка proto/m5-iphone): Postgres и сервер своего движка. Порты наружу не публикуются,
-  # Caddy ходит к серверу по имени сервиса. Секреты и срок макета – в /opt/lists/m5.env (создаёт автор вручную).
+  # Caddy ходит к серверу по имени сервиса через сеть default. Секреты – в /opt/m5 вне /opt/lists: каталог /opt/lists
+  # смонтирован в Caddy, который смотрит в интернет. Файлы создаются вручную до первой выкладки, у каждого сервиса свой.
   m5-postgres:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     restart: unless-stopped
-    mem_limit: 192m
-    memswap_limit: 192m
+    mem_limit: 128m
+    memswap_limit: 128m
     command:
       - postgres
       - -c
@@ -43,11 +44,12 @@ services:
       - max_connections=30
     environment:
       POSTGRES_DB: app
-    env_file: /opt/lists/m5.env
+    env_file: /opt/m5/postgres.env
     volumes:
       - m5-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      # -h: без него проверка идёт через сокет и проходит, пока init образа держит временный сервер без TCP
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d app"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -58,16 +60,17 @@ services:
         max-file: "3"
 
   m5-server:
-    image: node:24-alpine
+    image: node:24.16.0-alpine
     restart: unless-stopped
     init: true
-    mem_limit: 192m
-    memswap_limit: 192m
+    user: node
+    mem_limit: 128m
+    memswap_limit: 128m
     # Бандл – из релиза: /opt/lists смонтирован целиком, current разворачивается при старте контейнера.
-    command: ["node", "--max-old-space-size=128", "/srv/current/server/index.mjs"]
+    command: ["node", "--max-old-space-size=96", "/srv/current/server/index.mjs"]
     volumes:
       - /opt/lists:/srv:ro
-    env_file: /opt/lists/m5.env
+    env_file: /opt/m5/server.env
     environment:
       LISTEN_HOST: 0.0.0.0
       PORT: "13400"
@@ -79,14 +82,9 @@ services:
       m5-postgres:
         condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:13400/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
-        ]
-      interval: 5s
+      # wget из busybox, а не node -e: отдельный процесс Node на каждую проверку съедал бы память и CPU соседей
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:13400/api/health"]
+      interval: 10s
       timeout: 3s
       retries: 6
       start_period: 40s

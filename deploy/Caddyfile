@@ -15,7 +15,10 @@
 
 	handle /api/* {
 		header Cache-Control "no-store"
-		reverse_proxy m5-server:13400
+		# Пока пересоздаётся сервер при выкладке, Caddy держит запрос, а не отвечает 502
+		reverse_proxy m5-server:13400 {
+			lb_try_duration 15s
+		}
 	}
 
 	handle {
