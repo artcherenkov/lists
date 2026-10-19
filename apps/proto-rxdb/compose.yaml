@@ -1,0 +1,25 @@
+name: lists
+
+services:
+  rx-postgres:
+    image: postgres:17-alpine
+    container_name: rx-postgres
+    restart: "no"
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=60"]
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "127.0.0.1:15434:5432"
+    volumes:
+      - rx-pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  rx-pgdata:
+    name: rx-pgdata

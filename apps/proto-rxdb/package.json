@@ -1,0 +1,14 @@
+{
+  "name": "proto-rxdb",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "jose": "6.2.12",
+    "pg": "8.23.1",
+    "rxdb": "17.5.0",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}
