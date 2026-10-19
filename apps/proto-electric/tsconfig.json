@@ -1,1 +1,10 @@
-{ "extends": "../../tsconfig.base.json", "compilerOptions": { "noEmit": true, "lib": ["ES2023","DOM"], "types": ["vite/client","node"], "skipLibCheck": true }, "include": ["src","tests","server"] }
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023", "DOM"],
+    "types": ["vite/client", "node"],
+    "skipLibCheck": true
+  },
+  "include": ["src", "tests", "server"]
+}

@@ -1,4 +1,4 @@
-import { webkit, chromium } from '@playwright/test'
+import { webkit, chromium } from "@playwright/test";
 const code = `
 const out = {};
 try {
@@ -12,20 +12,31 @@ try {
   out.sync = 'ok';
 } catch (e) { out.err = e.name + ': ' + e.message; }
 postMessage(out);
-`
-for (const [name, bt] of [['webkit', webkit], ['chromium', chromium]]) {
-  for (const mode of ['ephemeral', 'persistent']) {
-    let ctx, browser
-    if (mode === 'ephemeral') { browser = await bt.launch(); ctx = await browser.newContext() }
-    else { ctx = await bt.launchPersistentContext('/tmp/el-pw-' + name) }
-    const page = await ctx.newPage()
-    await page.goto('http://127.0.0.1:14173/')
+`;
+for (const [name, bt] of [
+  ["webkit", webkit],
+  ["chromium", chromium],
+]) {
+  for (const mode of ["ephemeral", "persistent"]) {
+    let ctx, browser;
+    if (mode === "ephemeral") {
+      browser = await bt.launch();
+      ctx = await browser.newContext();
+    } else {
+      ctx = await bt.launchPersistentContext("/tmp/el-pw-" + name);
+    }
+    const page = await ctx.newPage();
+    await page.goto("http://127.0.0.1:14173/");
     const r = await page.evaluate(async (code) => {
-      const blob = new Blob([code], { type: 'text/javascript' })
-      const w = new Worker(URL.createObjectURL(blob), { type: 'module' })
-      return await new Promise((res) => { w.onmessage = (e) => res(e.data); w.onerror = (e) => res({ werr: String(e.message) }) })
-    }, code)
-    console.log(name, mode, JSON.stringify(r))
-    await ctx.close(); if (browser) await browser.close()
+      const blob = new Blob([code], { type: "text/javascript" });
+      const w = new Worker(URL.createObjectURL(blob), { type: "module" });
+      return await new Promise((res) => {
+        w.onmessage = (e) => res(e.data);
+        w.onerror = (e) => res({ werr: String(e.message) });
+      });
+    }, code);
+    console.log(name, mode, JSON.stringify(r));
+    await ctx.close();
+    if (browser) await browser.close();
   }
 }

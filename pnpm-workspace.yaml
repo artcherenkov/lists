@@ -3,5 +3,5 @@ packages:
   - packages/*
 
 allowBuilds:
-  '@journeyapps/wa-sqlite': false
+  "@journeyapps/wa-sqlite": false
   esbuild: true

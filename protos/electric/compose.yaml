@@ -3,7 +3,16 @@ services:
   el-postgres:
     image: postgres:17-alpine
     container_name: el-postgres
-    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
+    command:
+      [
+        "postgres",
+        "-c",
+        "wal_level=logical",
+        "-c",
+        "max_replication_slots=10",
+        "-c",
+        "max_wal_senders=10",
+      ]
     environment:
       POSTGRES_PASSWORD: proto
       POSTGRES_DB: proto
