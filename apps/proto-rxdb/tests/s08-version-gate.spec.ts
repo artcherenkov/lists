@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
+
 import { admin, browserOf, Device, pg, queueEmpty, uid, until } from "./helpers.ts";
 
-test.afterEach(async () => { await admin("/dev/settings", { min_dv: 3, cur_dv: 3 }); });
+test.afterEach(async () => {
+  await admin("/dev/settings", { min_dv: 3, cur_dv: 3 });
+});
 
 test("8а. клиент младше минимальной версии не пишет и не читает", async ({}, info) => {
   const user = uid();
@@ -11,7 +14,12 @@ test("8а. клиент младше минимальной версии не п
   await queueEmpty(B);
   await admin("/dev/settings", { min_dv: 2, cur_dv: 3 });
   const A = await Device.create(browserOf(info), "A", { user, dv: 1 }).start();
-  await until(() => A.p("info"), (i) => i.gate === "update-required", 10_000, "gate");
+  await until(
+    () => A.p("info"),
+    (i) => i.gate === "update-required",
+    10_000,
+    "gate",
+  );
   const mine = await A.p("addItem", { kind: "film", title: "From old" });
   await new Promise((r) => setTimeout(r, 2000));
   expect(await pg("select 1 from items where id=$1", [mine])).toHaveLength(0);
@@ -25,7 +33,12 @@ test("8б. клиент новее сервера ждёт и дошлёт, ко
   await admin("/dev/settings", { min_dv: 2, cur_dv: 2 });
   const A = await Device.create(browserOf(info), "A", { user, dv: 3 }).start();
   const id = await A.p("addItem", { title: "Waits" });
-  await until(() => A.p("info"), (i) => i.waiting, 10_000, "waiting");
+  await until(
+    () => A.p("info"),
+    (i) => i.waiting,
+    10_000,
+    "waiting",
+  );
   expect(await pg("select 1 from items where id=$1", [id])).toHaveLength(0);
   expect((await A.p("info")).gate).toBe("ok");
   await admin("/dev/settings", { min_dv: 3, cur_dv: 3 });

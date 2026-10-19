@@ -1,8 +1,10 @@
+import type { JWK } from "jose";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 // Только для проверок: выдуманные ключ и аккаунты, управление сервером, внедрение сбоев. В продукт не идёт.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
-import type { JWK } from "jose";
+
 import { applyStep } from "../shared/steps.ts";
 import { ISSUER } from "./auth.ts";
 import { ITEM_FIELDS } from "./rules.ts";
@@ -20,14 +22,21 @@ if (existsSync(KEY_FILE)) {
   const pair = await generateKeyPair("EdDSA", { extractable: true });
   privateKey = pair.privateKey;
   publicJwk = { ...(await exportJWK(pair.publicKey)), kid: "proto-1", alg: "EdDSA", use: "sig" };
-  writeFileSync(KEY_FILE, JSON.stringify({ priv: await exportJWK(pair.privateKey), pub: publicJwk }));
+  writeFileSync(
+    KEY_FILE,
+    JSON.stringify({ priv: await exportJWK(pair.privateKey), pub: publicJwk }),
+  );
 }
 
 const poison = new Set<string>();
 let loseResponses = 0;
 const ops: unknown[] = [];
-hooks.beforeApply = (id) => { if (poison.has(id)) throw new Error("injected failure"); };
-hooks.onApply = (e) => { ops.push(e); };
+hooks.beforeApply = (id) => {
+  if (poison.has(id)) throw new Error("injected failure");
+};
+hooks.onApply = (e) => {
+  ops.push(e);
+};
 hooks.loseResponse = () => loseResponses > 0 && (loseResponses--, true);
 
 async function readJson(req: IncomingMessage) {
@@ -46,7 +55,10 @@ async function migrate(to: number) {
       let d = row;
       for (let v = row.dv + 1; v <= to; v++) d = applyStep(v, d);
       const cols = [...ITEM_FIELDS, "dv"];
-      await c.query(`UPDATE items SET ${cols.map((k, i) => `${k} = $${i + 2}`).join(",")} WHERE id = $1`, [row.id, ...cols.map((k) => d[k])]);
+      await c.query(
+        `UPDATE items SET ${cols.map((k, i) => `${k} = $${i + 2}`).join(",")} WHERE id = $1`,
+        [row.id, ...cols.map((k) => d[k])],
+      );
     }
     await c.query("UPDATE settings SET value = $1 WHERE key IN ('cur_dv', 'min_dv')", [String(to)]);
     await c.query("COMMIT");
@@ -59,14 +71,25 @@ async function migrate(to: number) {
 }
 
 export async function dev(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
-  const out = (b: unknown) => { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(b)); return true; };
+  const out = (b: unknown) => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify(b));
+    return true;
+  };
   if (url.pathname === "/jwks") return out({ keys: [publicJwk] });
   if (!url.pathname.startsWith("/dev/")) return false;
   const b = await readJson(req);
   switch (url.pathname) {
     case "/dev/token": {
       const ttl = b.ttl ?? 300;
-      const token = await new SignJWT({}).setProtectedHeader({ alg: "EdDSA", kid: publicJwk.kid }).setSubject(b.user).setIssuer(ISSUER).setAudience(ISSUER).setIssuedAt().setExpirationTime(`${ttl}s`).sign(privateKey);
+      const token = await new SignJWT({})
+        .setProtectedHeader({ alg: "EdDSA", kid: publicJwk.kid })
+        .setSubject(b.user)
+        .setIssuer(ISSUER)
+        .setAudience(ISSUER)
+        .setIssuedAt()
+        .setExpirationTime(`${ttl}s`)
+        .sign(privateKey);
       return out({ token, exp: Math.floor(Date.now() / 1000) + ttl });
     }
     case "/dev/sql": {
@@ -74,7 +97,8 @@ export async function dev(req: IncomingMessage, res: ServerResponse, url: URL): 
       return out({ rows: r.rows });
     }
     case "/dev/settings":
-      for (const [k, v] of Object.entries(b)) await pool.query("UPDATE settings SET value = $2 WHERE key = $1", [k, String(v)]);
+      for (const [k, v] of Object.entries(b))
+        await pool.query("UPDATE settings SET value = $2 WHERE key = $1", [k, String(v)]);
       return out({});
     case "/dev/migrate":
       await migrate(b.to);

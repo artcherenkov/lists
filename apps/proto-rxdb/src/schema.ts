@@ -1,4 +1,5 @@
 import type { RxJsonSchema } from "rxdb/plugins/core";
+
 import { applyStep } from "../shared/steps.ts";
 
 export type Doc = Record<string, any>;
@@ -14,9 +15,19 @@ export const itemsSchema = (dv: number): RxJsonSchema<Doc> => ({
   primaryKey: "id",
   type: "object",
   properties: {
-    id: key, kind: text, title: text, year: maybe("integer"), tmdb_id: maybe("string"), poster_path: maybe("string"), status: text,
+    id: key,
+    kind: text,
+    title: text,
+    year: maybe("integer"),
+    tmdb_id: maybe("string"),
+    poster_path: maybe("string"),
+    status: text,
     rating: { type: ["integer", "null"], minimum: 1, maximum: dv >= 2 ? 5 : 10 } as any,
-    watched_month: maybe("string"), note: maybe("string"), added_at: time, updated_at: time, deleted_at: maybe("string"),
+    watched_month: maybe("string"),
+    note: maybe("string"),
+    added_at: time,
+    updated_at: time,
+    deleted_at: maybe("string"),
     dv: { type: "integer", minimum: 1, maximum: 1000, multipleOf: 1 },
   },
   required: ["id", "kind", "title", "status", "added_at", "updated_at", "dv"],
@@ -37,18 +48,28 @@ export const showsSchema: RxJsonSchema<Doc> = {
   version: 0,
   primaryKey: "id",
   type: "object",
-  properties: { id: key, title: text, seasons_json: text, continuing: { type: "boolean" }, updated_at: time },
+  properties: {
+    id: key,
+    title: text,
+    seasons_json: text,
+    continuing: { type: "boolean" },
+    updated_at: time,
+  },
   required: ["id", "title", "seasons_json", "updated_at"],
 };
 
 // Только на устройстве, не синхронизируются: журнал отказов и отложенные правки.
 export const rejectionsSchema: RxJsonSchema<Doc> = {
-  version: 0, primaryKey: "id", type: "object",
+  version: 0,
+  primaryKey: "id",
+  type: "object",
   properties: { id: key, coll: text, doc_id: text, reason: text, at: time },
   required: ["id", "coll", "doc_id", "reason", "at"],
 };
 export const deferredSchema: RxJsonSchema<Doc> = {
-  version: 0, primaryKey: "id", type: "object",
+  version: 0,
+  primaryKey: "id",
+  type: "object",
   properties: { id: key, coll: text, doc_id: text, edits_json: text },
   required: ["id", "coll", "doc_id", "edits_json"],
 };

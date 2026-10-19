@@ -1,15 +1,22 @@
-import { createServer } from "node:http";
-import type { IncomingMessage, ServerResponse } from "node:http";
-import pg from "pg";
-import { sessionOf } from "./auth.ts";
 import type { Session } from "./auth.ts";
+import type { Collection } from "./sync.ts";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+import { createServer } from "node:http";
+import pg from "pg";
+
+import { sessionOf } from "./auth.ts";
 import { dev } from "./dev.ts";
 import { docState, hooks, pool, pull, push, settings } from "./sync.ts";
-import type { Collection } from "./sync.ts";
 
 const PORT = 13200;
 
-function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
+function send(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
 }
@@ -39,11 +46,18 @@ async function dataVersion(req: IncomingMessage, res: ServerResponse): Promise<n
 const streams = new Set<{ user: string; res: ServerResponse }>();
 
 async function listen() {
-  const client = new pg.Client({ host: "127.0.0.1", port: 15434, user: "postgres", password: "postgres", database: "app" });
+  const client = new pg.Client({
+    host: "127.0.0.1",
+    port: 15434,
+    user: "postgres",
+    password: "postgres",
+    database: "app",
+  });
   await client.connect();
   await client.query("LISTEN changes");
   client.on("notification", (m) => {
-    for (const s of streams) if (m.payload === "*" || m.payload === s.user) s.res.write("data: sync\n\n");
+    for (const s of streams)
+      if (m.payload === "*" || m.payload === s.user) s.res.write("data: sync\n\n");
   });
 }
 
@@ -55,7 +69,11 @@ function events(res: ServerResponse, session: Session) {
   const ping = setInterval(() => res.write(": ping\n\n"), 15_000);
   // Срок токена кончился – закрываем поток, клиент подключится с новым токеном.
   const expire = setTimeout(() => res.end(), Math.max(0, session.exp * 1000 - Date.now()));
-  res.on("close", () => { streams.delete(stream); clearInterval(ping); clearTimeout(expire); });
+  res.on("close", () => {
+    streams.delete(stream);
+    clearInterval(ping);
+    clearTimeout(expire);
+  });
 }
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
@@ -71,13 +89,33 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (!["items", "seasons", "shows"].includes(coll!)) return send(res, 404, {});
   if (route === "pull") {
     const q = url.searchParams;
-    return send(res, 200, await pull(coll as Collection, session.user, { seq: Number(q.get("seq")), epoch: q.get("epoch") ?? undefined }, Number(q.get("limit") ?? 100)));
+    return send(
+      res,
+      200,
+      await pull(
+        coll as Collection,
+        session.user,
+        { seq: Number(q.get("seq")), epoch: q.get("epoch") ?? undefined },
+        Number(q.get("limit") ?? 100),
+      ),
+    );
   }
   if (coll === "shows") return send(res, 403, { error: "read-only" });
-  if (route === "ids") return send(res, 200, { ids: (await pool.query(`SELECT id FROM ${coll} WHERE user_id = $1`, [session.user])).rows.map((r) => r.id) });
-  if (route === "doc") return send(res, 200, await docState(coll as "items" | "seasons", session.user, id!));
+  if (route === "ids")
+    return send(res, 200, {
+      ids: (await pool.query(`SELECT id FROM ${coll} WHERE user_id = $1`, [session.user])).rows.map(
+        (r) => r.id,
+      ),
+    });
+  if (route === "doc")
+    return send(res, 200, await docState(coll as "items" | "seasons", session.user, id!));
   if (route === "push" && req.method === "POST") {
-    const result = await push(coll as "items" | "seasons", session.user, dv, (await body(req)).rows);
+    const result = await push(
+      coll as "items" | "seasons",
+      session.user,
+      dv,
+      (await body(req)).rows,
+    );
     if (hooks.loseResponse()) return req.socket.destroy();
     return send(res, 200, result);
   }
@@ -86,5 +124,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
 await listen();
 createServer((req, res) => {
-  handle(req, res).catch((e) => !res.headersSent && send(res, 500, { error: String(e?.message ?? e) }));
+  handle(req, res).catch(
+    (e) => !res.headersSent && send(res, 500, { error: String(e?.message ?? e) }),
+  );
 }).listen(PORT, "127.0.0.1", () => console.log("server on", PORT));

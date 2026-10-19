@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+
 import { browserOf, Device, pg, queueEmpty, uid } from "./helpers.ts";
 import { atCurrent } from "./setup.ts";
 
@@ -33,7 +34,9 @@ test("1б. браузер в режиме «без сети» (navigator.onLine 
   const t0 = Date.now();
   await A.ctx.setOffline(false);
   await queueEmpty(A, 7000);
-  console.log(`[${info.project.name}] 1б очередь ушла через ${Date.now() - t0} мс после возврата сети (retry 8000 мс)`);
+  console.log(
+    `[${info.project.name}] 1б очередь ушла через ${Date.now() - t0} мс после возврата сети (retry 8000 мс)`,
+  );
   expect(await pg("select 1 from items where id=$1", [id])).toHaveLength(1);
   await A.kill();
 });

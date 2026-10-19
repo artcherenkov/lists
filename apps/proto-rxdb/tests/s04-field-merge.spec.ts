@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+
 import { admin, browserOf, Device, opsLog, pg, queueEmpty, uid, until } from "./helpers.ts";
 import { atCurrent } from "./setup.ts";
 
@@ -9,7 +10,11 @@ test("4. правка уходит полями; разные поля сохр�
   const A = await Device.create(browserOf(info), "A", { user }).start();
   const B = await Device.create(browserOf(info), "B", { user }).start();
   const id = await A.p("addItem", { title: "T" });
-  await until(() => B.item(id), (v) => !!v, 15_000);
+  await until(
+    () => B.item(id),
+    (v) => !!v,
+    15_000,
+  );
   await queueEmpty(A);
   await pg("update items set future_field = 'FUTURE' where id = $1", [id]);
   await opsLog();
@@ -26,9 +31,22 @@ test("4. правка уходит полями; разные поля сохр�
   expect(row).toEqual({ rating: 3, note: "from B", future_field: "FUTURE" });
   const ops = (await opsLog()).filter((o) => !o.creating);
   console.log(`[${info.project.name}] поля на сервер:`, JSON.stringify(ops.map((o) => o.fields)));
-  expect(ops.map((o) => o.fields)).toEqual([["rating", "updated_at"], ["note", "updated_at"]]);
-  await until(() => A.item(id), (v) => v?.note === "from B" && v?.rating === 3, 15_000, "A merged");
-  await until(() => B.item(id), (v) => v?.rating === 3 && v?.note === "from B", 15_000, "B merged");
+  expect(ops.map((o) => o.fields)).toEqual([
+    ["rating", "updated_at"],
+    ["note", "updated_at"],
+  ]);
+  await until(
+    () => A.item(id),
+    (v) => v?.note === "from B" && v?.rating === 3,
+    15_000,
+    "A merged",
+  );
+  await until(
+    () => B.item(id),
+    (v) => v?.rating === 3 && v?.note === "from B",
+    15_000,
+    "B merged",
+  );
 
   // одно поле: последнее пришедшее на сервер
   await A.offline();
@@ -40,7 +58,12 @@ test("4. правка уходит полями; разные поля сохр�
   await A.online();
   await queueEmpty(A);
   expect((await pg("select title from items where id=$1", [id]))[0].title).toBe("Title A");
-  await until(() => B.item(id), (v) => v?.title === "Title A", 15_000, "B converged");
+  await until(
+    () => B.item(id),
+    (v) => v?.title === "Title A",
+    15_000,
+    "B converged",
+  );
   await A.kill();
   await B.kill();
 });

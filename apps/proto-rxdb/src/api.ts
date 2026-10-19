@@ -23,13 +23,20 @@ export class Api {
   ) {}
 
   private async token() {
-    if (this.tok && this.tok.exp * 1000 - Date.now() > Math.min(10_000, (this.ttl ?? 300) * 300)) return this.tok.token;
-    const r = await fetch(`${this.base}/dev/token`, { method: "POST", body: JSON.stringify({ user: this.user, ttl: this.ttl }) });
+    if (this.tok && this.tok.exp * 1000 - Date.now() > Math.min(10_000, (this.ttl ?? 300) * 300))
+      return this.tok.token;
+    const r = await fetch(`${this.base}/dev/token`, {
+      method: "POST",
+      body: JSON.stringify({ user: this.user, ttl: this.ttl }),
+    });
     this.tok = await r.json();
     return this.tok!.token;
   }
 
-  private headers = async () => ({ authorization: `Bearer ${await this.token()}`, "x-data-version": String(this.dv) });
+  private headers = async () => ({
+    authorization: `Bearer ${await this.token()}`,
+    "x-data-version": String(this.dv),
+  });
 
   // 426: клиент младше минимальной версии – ничего не пишем и не читаем; 503: сервер ещё на старой версии – ждём, RxDB повторит.
   private check(r: Response) {
@@ -49,7 +56,11 @@ export class Api {
   }
 
   async post(path: string, body: unknown) {
-    const r = await fetch(this.base + path, { method: "POST", headers: { ...(await this.headers()), "content-type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch(this.base + path, {
+      method: "POST",
+      headers: { ...(await this.headers()), "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
     this.check(r);
     return r.json();
   }

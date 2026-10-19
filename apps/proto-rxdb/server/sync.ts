@@ -1,18 +1,36 @@
 import { createHash } from "node:crypto";
 import pg from "pg";
+
 import { checkItem, checkSeason, ITEM_FIELDS, SEASON_FIELDS } from "./rules.ts";
 
 type Doc = Record<string, any>;
 export type Collection = "items" | "seasons" | "shows";
 export type PushRow = { assumedMasterState?: Doc; newDocumentState: Doc };
-export type PushResult = { conflicts: Doc[]; rejected: { id: string; reason: string }[]; later: string[] };
+export type PushResult = {
+  conflicts: Doc[];
+  rejected: { id: string; reason: string }[];
+  later: string[];
+};
 
-export const pool = new pg.Pool({ host: "127.0.0.1", port: 15434, user: "postgres", password: "postgres", database: "app", max: 8 });
+export const pool = new pg.Pool({
+  host: "127.0.0.1",
+  port: 15434,
+  user: "postgres",
+  password: "postgres",
+  database: "app",
+  max: 8,
+});
 
 // Крючки для проверок: в продуктовом пути ничего не делают.
 export const hooks = {
   beforeApply: (_id: string) => {},
-  onApply: (_e: { coll: string; id: string; dv: number; creating: boolean; fields: string[] }) => {},
+  onApply: (_e: {
+    coll: string;
+    id: string;
+    dv: number;
+    creating: boolean;
+    fields: string[];
+  }) => {},
   loseResponse: () => false,
 };
 
@@ -29,7 +47,15 @@ export async function settings() {
 const same = (x: unknown, y: unknown) => (x ?? null) === (y ?? null);
 
 function toDoc(coll: Collection, r: Doc): Doc {
-  if (coll === "shows") return { id: r.id, title: r.title, seasons_json: r.seasons_json, continuing: r.continuing, updated_at: r.updated_at, _deleted: !!r.gone };
+  if (coll === "shows")
+    return {
+      id: r.id,
+      title: r.title,
+      seasons_json: r.seasons_json,
+      continuing: r.continuing,
+      updated_at: r.updated_at,
+      _deleted: !!r.gone,
+    };
   const t = TABLES[coll];
   const d: Doc = { id: r.id };
   for (const f of t.fields) d[f] = r[f];
@@ -40,7 +66,12 @@ function toDoc(coll: Collection, r: Doc): Doc {
 
 // Выдача изменений по номеру. Контрольная точка – {seq, epoch}: при другой эпохе (база восстановлена
 // из копии) читаем с начала, иначе устройство с номером из «будущего» не получило бы ничего.
-export async function pull(coll: Collection, user: string, cp: { seq?: number; epoch?: string }, limit: number) {
+export async function pull(
+  coll: Collection,
+  user: string,
+  cp: { seq?: number; epoch?: string },
+  limit: number,
+) {
   const s = await settings();
   const seq = cp.epoch === s.epoch ? (cp.seq ?? 0) : 0;
   // Сериал каталога – тем, у кого он есть в списке; `gone` – ушёл из списка, устройство его удаляет.
@@ -51,17 +82,28 @@ export async function pull(coll: Collection, user: string, cp: { seq?: number; e
          ORDER BY s.seq LIMIT $3`
       : `SELECT * FROM ${coll} WHERE user_id = $1 AND seq > $2 ORDER BY seq LIMIT $3`;
   const { rows } = await pool.query(sql, [user, seq, limit]);
-  return { documents: rows.map((r) => toDoc(coll, r)), checkpoint: { seq: rows.length ? Number(rows[rows.length - 1].seq) : seq, epoch: s.epoch } };
+  return {
+    documents: rows.map((r) => toDoc(coll, r)),
+    checkpoint: { seq: rows.length ? Number(rows[rows.length - 1].seq) : seq, epoch: s.epoch },
+  };
 }
 
 export async function docState(coll: "items" | "seasons", user: string, id: string): Promise<Doc> {
-  const { rows } = await pool.query(`SELECT * FROM ${coll} WHERE id = $1 AND user_id = $2`, [id, user]);
+  const { rows } = await pool.query(`SELECT * FROM ${coll} WHERE id = $1 AND user_id = $2`, [
+    id,
+    user,
+  ]);
   return rows[0] ? toDoc(coll, rows[0]) : { id, _deleted: true };
 }
 
 // Приём правок пачкой, одной транзакцией. Блокировка берётся первой: записи идут по одной, и порядок
 // номеров совпадает с порядком коммитов (триггер bump_seq).
-export async function push(coll: "items" | "seasons", user: string, dv: number, rows: PushRow[]): Promise<PushResult> {
+export async function push(
+  coll: "items" | "seasons",
+  user: string,
+  dv: number,
+  rows: PushRow[],
+): Promise<PushResult> {
   const c = await pool.connect();
   const out: PushResult = { conflicts: [], rejected: [], later: [] };
   try {
@@ -79,7 +121,14 @@ export async function push(coll: "items" | "seasons", user: string, dv: number, 
   }
 }
 
-async function applyRow(c: pg.PoolClient, coll: "items" | "seasons", user: string, dv: number, row: PushRow, out: PushResult) {
+async function applyRow(
+  c: pg.PoolClient,
+  coll: "items" | "seasons",
+  user: string,
+  dv: number,
+  row: PushRow,
+  out: PushResult,
+) {
   const t = TABLES[coll];
   const n = row.newDocumentState;
   const a = row.assumedMasterState;
@@ -95,7 +144,11 @@ async function applyRow(c: pg.PoolClient, coll: "items" | "seasons", user: strin
   };
   const answer = (r: Doc | undefined) => {
     const doc = r && toDoc(coll, r);
-    if (doc && Object.keys(doc).some((k) => (k === "_deleted" ? !!doc[k] !== !!n[k] : !same(doc[k], n[k])))) out.conflicts.push(doc);
+    if (
+      doc &&
+      Object.keys(doc).some((k) => (k === "_deleted" ? !!doc[k] !== !!n[k] : !same(doc[k], n[k])))
+    )
+      out.conflicts.push(doc);
   };
 
   if (cur && !mine) return refuse("not yours");
@@ -103,8 +156,11 @@ async function applyRow(c: pg.PoolClient, coll: "items" | "seasons", user: strin
   if (bad) return refuse(`unknown field ${bad}`);
 
   // Повтор той же правки (ответ потерялся) не накладывается второй раз: иначе он затёр бы более позднюю правку другого устройства.
-  const key = createHash("sha1").update(JSON.stringify([user, coll, a ?? null, n])).digest("hex");
-  if ((await c.query("SELECT 1 FROM applied_pushes WHERE key = $1", [key])).rowCount) return answer(mine);
+  const key = createHash("sha1")
+    .update(JSON.stringify([user, coll, a ?? null, n]))
+    .digest("hex");
+  if ((await c.query("SELECT 1 FROM applied_pushes WHERE key = $1", [key])).rowCount)
+    return answer(mine);
 
   const creating = !mine;
   const changed = t.fields.filter((f) => !same(n[f], a?.[f]));
@@ -118,13 +174,25 @@ async function applyRow(c: pg.PoolClient, coll: "items" | "seasons", user: strin
   } else if (!deleting) {
     const err = checkSeason(merged);
     if (err) return refuse(err);
-    const item = (await c.query("SELECT kind FROM items WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL", [merged.item_id, user])).rows[0];
+    const item = (
+      await c.query(
+        "SELECT kind FROM items WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
+        [merged.item_id, user],
+      )
+    ).rows[0];
     if (!item) return void out.later.push(id); // отметка пришла раньше своей записи: коллекции идут независимо
     if (item.kind !== "series") return refuse("marks only for series");
   }
 
   // Что писать. Правка – только изменённые поля; отметка, правленная после удаления на другом устройстве, возвращается.
-  const v: Doc = creating ? { id, user_id: user, ...(coll === "items" ? { dv } : {}), ...Object.fromEntries(t.fields.filter((f) => n[f] !== undefined).map((f) => [f, n[f]])) } : Object.fromEntries(changed.map((f) => [f, n[f]]));
+  const v: Doc = creating
+    ? {
+        id,
+        user_id: user,
+        ...(coll === "items" ? { dv } : {}),
+        ...Object.fromEntries(t.fields.filter((f) => n[f] !== undefined).map((f) => [f, n[f]])),
+      }
+    : Object.fromEntries(changed.map((f) => [f, n[f]]));
   if (t.tomb) {
     if (deleting && creating) return;
     if (deleting || changed.length || creating) v[t.tomb] = deleting;
@@ -137,12 +205,23 @@ async function applyRow(c: pg.PoolClient, coll: "items" | "seasons", user: strin
         : `UPDATE ${coll} SET ${names.map((k, i) => `${k} = $${i + 2}`).join(",")} WHERE id = $1`,
       creating ? names.map((k) => v[k]) : [id, ...names.map((k) => v[k])],
     );
-    hooks.onApply({ coll, id, dv, creating, fields: names.filter((k) => k !== "id" && k !== "user_id") });
+    hooks.onApply({
+      coll,
+      id,
+      dv,
+      creating,
+      fields: names.filter((k) => k !== "id" && k !== "user_id"),
+    });
   }
   const after = (await c.query(`SELECT * FROM ${coll} WHERE id = $1`, [id])).rows[0];
   // Сериал каталога поднимается, когда запись появилась или ушла: иначе номер строки каталога старше контрольной точки
   // устройства и сериал не приедет (и не уйдёт).
-  if (coll === "items" && after.kind === "series" && after.tmdb_id && (creating || changed.includes("deleted_at"))) {
+  if (
+    coll === "items" &&
+    after.kind === "series" &&
+    after.tmdb_id &&
+    (creating || changed.includes("deleted_at"))
+  ) {
     await c.query(
       `INSERT INTO shows (id, title, seasons_json, updated_at) VALUES ($1, $2, '[]', $3)
        ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id`,
