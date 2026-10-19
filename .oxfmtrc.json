@@ -20,6 +20,6 @@
     "packages/sheet/README.md",
     ".claude/**",
     "docs/plan.md",
-    "docs/milestones/**"
+    "docs/tasks/**"
   ]
 }
