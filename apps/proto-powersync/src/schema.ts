@@ -37,7 +37,13 @@ export const shows = new Table({
 });
 
 export const rejections = new Table(
-  { table_name: column.text, row_id: column.text, op: column.text, error: column.text, at: column.text },
+  {
+    table_name: column.text,
+    row_id: column.text,
+    op: column.text,
+    error: column.text,
+    at: column.text,
+  },
   { localOnly: true },
 );
 

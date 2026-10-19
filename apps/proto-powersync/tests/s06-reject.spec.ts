@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
+
 import { admin, Device, pg, queueEmpty, uid, until } from "./helpers.ts";
 
-test.afterEach(async () => { await admin("/admin/fail", { mode: "none" }); });
+test.afterEach(async () => {
+  await admin("/admin/fail", { mode: "none" });
+});
 const browserOf = (info: any) => info.project.name as "chromium" | "webkit";
 
 test("6. отказ одной правки: очередь идёт дальше, клиент узнаёт, правка откатывается", async ({}, info) => {
@@ -22,12 +25,30 @@ test("6. отказ одной правки: очередь идёт дальш�
   const t0 = Date.now();
   await queueEmpty(A);
   const tQueue = Date.now() - t0;
-  await until(() => A.item(x), (v) => v?.rating === 3, 20_000, "X rolled back");
+  await until(
+    () => A.item(x),
+    (v) => v?.rating === 3,
+    20_000,
+    "X rolled back",
+  );
   const tRollback = Date.now() - t0;
-  await until(() => A.item(w), (v) => !v, 20_000, "W removed");
-  await until(() => A.season(`${w}:1`), (v) => !v, 20_000, "season of W removed");
+  await until(
+    () => A.item(w),
+    (v) => !v,
+    20_000,
+    "W removed",
+  );
+  await until(
+    () => A.season(`${w}:1`),
+    (v) => !v,
+    20_000,
+    "season of W removed",
+  );
   const rej = await A.rejections();
-  console.log(`[${info.project.name}] очередь ушла за ${tQueue} мс, откат за ${tRollback} мс; отказы:`, JSON.stringify(rej.map((r: any) => [r.table_name, r.op, r.error])));
+  console.log(
+    `[${info.project.name}] очередь ушла за ${tQueue} мс, откат за ${tRollback} мс; отказы:`,
+    JSON.stringify(rej.map((r: any) => [r.table_name, r.op, r.error])),
+  );
   expect(rej).toHaveLength(3);
   expect((await pg("select status from items where id=$1", [y]))[0].status).toBe("watched");
   expect(await pg("select 1 from items where id=$1", [z])).toHaveLength(1);

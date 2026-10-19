@@ -16,7 +16,7 @@ sync_config:
 
 client_auth:
   jwks_uri: http://host.docker.internal:18100/jwks.json
-  audience: ['powersync-proto']
+  audience: ["powersync-proto"]
 
 telemetry:
   disable_telemetry_sharing: true

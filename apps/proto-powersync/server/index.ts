@@ -1,8 +1,9 @@
-import { createServer } from "node:http";
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { exportJWK, generateKeyPair, importJWK, jwtVerify, SignJWT } from "jose";
 import type { JWK } from "jose";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+import { exportJWK, generateKeyPair, importJWK, jwtVerify, SignJWT } from "jose";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import pg from "pg";
 
 const PORT = 18100;
@@ -59,7 +60,12 @@ function readBody(req: IncomingMessage): Promise<any> {
   });
 }
 
-function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
+function send(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
 }
@@ -78,8 +84,19 @@ let publicKeyObj: CryptoKey;
 
 // --- правила записи ---
 const ITEM_COLS = new Set([
-  "kind", "title", "year", "tmdb_id", "poster_path", "status", "rating",
-  "watched_month", "note", "added_at", "updated_at", "deleted_at", "dv",
+  "kind",
+  "title",
+  "year",
+  "tmdb_id",
+  "poster_path",
+  "status",
+  "rating",
+  "watched_month",
+  "note",
+  "added_at",
+  "updated_at",
+  "deleted_at",
+  "dv",
 ]);
 const CREATE_ONLY = new Set(["year", "tmdb_id", "poster_path", "added_at"]);
 const STATUSES = new Set(["want", "watching", "watched", "waiting"]);
@@ -97,12 +114,19 @@ function validateItem(data: Record<string, any>, creating: boolean, dv: number):
     const max = dv >= 2 ? 5 : 10;
     if (!Number.isInteger(data.rating) || data.rating < 1 || data.rating > max) return "bad rating";
   }
-  if ("note" in data && typeof data.note === "string" && data.note.length > 2000) return "note too long";
+  if ("note" in data && typeof data.note === "string" && data.note.length > 2000)
+    return "note too long";
   if (data.status === "waiting" && data.kind === "film") return "waiting only for series";
   return null;
 }
 
-type Op = { op: "PUT" | "PATCH" | "DELETE"; table: string; id: string; data?: Record<string, any>; metadata?: string };
+type Op = {
+  op: "PUT" | "PATCH" | "DELETE";
+  table: string;
+  id: string;
+  data?: Record<string, any>;
+  metadata?: string;
+};
 type Result = { id: string; table: string; op: string; status: "ok" | "rejected"; error?: string };
 
 async function applyOp(user: string, dv: number, op: Op): Promise<Result> {
@@ -125,7 +149,9 @@ async function applyOp(user: string, dv: number, op: Op): Promise<Result> {
       const set = cols.map((c) => `${c} = EXCLUDED.${c}`).join(", ");
       const sql =
         `INSERT INTO items (${allCols.join(",")}) VALUES (${allCols.map((_, i) => `$${i + 1}`).join(",")}) ` +
-        (set ? `ON CONFLICT (id) DO UPDATE SET ${set} WHERE items.user_id = EXCLUDED.user_id` : `ON CONFLICT (id) DO NOTHING`);
+        (set
+          ? `ON CONFLICT (id) DO UPDATE SET ${set} WHERE items.user_id = EXCLUDED.user_id`
+          : `ON CONFLICT (id) DO NOTHING`);
       const r = await pool.query(sql, vals);
       if (r.rowCount === 0) return rej("id belongs to another account");
       return { ...base, status: "ok" };
@@ -133,7 +159,9 @@ async function applyOp(user: string, dv: number, op: Op): Promise<Result> {
     if (cols.length === 0) return { ...base, status: "ok" };
     const set = cols.map((c, i) => `${c} = $${i + 3}`).join(", ");
     const r = await pool.query(`UPDATE items SET ${set} WHERE id = $1 AND user_id = $2`, [
-      op.id, user, ...cols.map((c) => data[c]),
+      op.id,
+      user,
+      ...cols.map((c) => data[c]),
     ]);
     return r.rowCount ? { ...base, status: "ok" } : rej("not found or not yours");
   }
@@ -146,16 +174,25 @@ async function applyOp(user: string, dv: number, op: Op): Promise<Result> {
       return { ...base, status: "ok" };
     }
     for (const k of Object.keys(data))
-      if (!["item_id", "season", "state", "updated_at"].includes(k)) return rej(`unknown field ${k}`);
+      if (!["item_id", "season", "state", "updated_at"].includes(k))
+        return rej(`unknown field ${k}`);
     if ("state" in data && !["watching", "watched"].includes(data.state)) return rej("bad state");
-    const item = await pool.query("SELECT kind, tmdb_id FROM items WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL", [itemId, user]);
+    const item = await pool.query(
+      "SELECT kind, tmdb_id FROM items WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
+      [itemId, user],
+    );
     if (!item.rowCount) return rej("item not found");
     if (item.rows[0].kind !== "series") return rej("marks only for series");
     // PATCH по отсутствующей строке (её удалили на другом устройстве) – вставка, правка не теряется
     const state = data.state ?? "watching";
     await pool.query(
       `INSERT INTO seasons (id, user_id, item_id, season, state, updated_at) VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (id) DO UPDATE SET ${["state", "updated_at"].filter((c) => c in data || c === "state" && op.op === "PUT").map((c) => `${c} = EXCLUDED.${c}`).join(", ") || "id = seasons.id"}
+       ON CONFLICT (id) DO UPDATE SET ${
+         ["state", "updated_at"]
+           .filter((c) => c in data || (c === "state" && op.op === "PUT"))
+           .map((c) => `${c} = EXCLUDED.${c}`)
+           .join(", ") || "id = seasons.id"
+       }
        WHERE seasons.user_id = EXCLUDED.user_id`,
       [op.id, user, itemId, Number(seasonStr), state, data.updated_at ?? null],
     );
@@ -177,7 +214,14 @@ async function handleUpload(req: IncomingMessage, res: ServerResponse) {
   const body = await readBody(req);
   const results: Result[] = [];
   for (const op of body.ops as Op[]) {
-    opsLog.push({ user, dv, op: op.op, table: op.table, id: op.id, fields: Object.keys(op.data ?? {}) });
+    opsLog.push({
+      user,
+      dv,
+      op: op.op,
+      table: op.table,
+      id: op.id,
+      fields: Object.keys(op.data ?? {}),
+    });
     try {
       results.push(await applyOp(user, dv, op));
     } catch (e: any) {
@@ -207,8 +251,10 @@ async function handleToken(req: IncomingMessage, res: ServerResponse) {
 async function handleAdmin(path: string, req: IncomingMessage, res: ServerResponse) {
   const body = await readBody(req);
   if (path === "/admin/settings") {
-    if (body.min != null) await pool.query("UPDATE settings SET value=$1 WHERE key='min_dv'", [body.min]);
-    if (body.cur != null) await pool.query("UPDATE settings SET value=$1 WHERE key='cur_dv'", [body.cur]);
+    if (body.min != null)
+      await pool.query("UPDATE settings SET value=$1 WHERE key='min_dv'", [body.min]);
+    if (body.cur != null)
+      await pool.query("UPDATE settings SET value=$1 WHERE key='cur_dv'", [body.cur]);
     return send(res, 200, { min: await setting("min_dv"), cur: await setting("cur_dv") });
   }
   if (path === "/admin/sql") {
@@ -239,7 +285,9 @@ async function handleAdmin(path: string, req: IncomingMessage, res: ServerRespon
     const c = await pool.connect();
     try {
       await c.query("BEGIN");
-      await c.query("UPDATE items SET rating = CASE WHEN rating IS NULL THEN NULL ELSE (rating + 1) / 2 END, dv = 2 WHERE dv = 1");
+      await c.query(
+        "UPDATE items SET rating = CASE WHEN rating IS NULL THEN NULL ELSE (rating + 1) / 2 END, dv = 2 WHERE dv = 1",
+      );
       await c.query("UPDATE settings SET value = 2 WHERE key IN ('cur_dv','min_dv')");
       await c.query("COMMIT");
     } catch (e) {
@@ -262,7 +310,8 @@ async function main() {
       if (path === "/jwks.json") return send(res, 200, { keys: [publicJwk] });
       if (req.method === "POST" && path === "/token") return await handleToken(req, res);
       if (req.method === "POST" && path === "/upload") return await handleUpload(req, res);
-      if (req.method === "POST" && path.startsWith("/admin/")) return await handleAdmin(path, req, res);
+      if (req.method === "POST" && path.startsWith("/admin/"))
+        return await handleAdmin(path, req, res);
       send(res, 404, {});
     } catch (e: any) {
       send(res, 500, { error: String(e?.message ?? e) });

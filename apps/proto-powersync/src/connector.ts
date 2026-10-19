@@ -1,10 +1,23 @@
-import type { AbstractPowerSyncDatabase, PowerSyncBackendConnector, PowerSyncCredentials } from "@powersync/web";
+import type {
+  AbstractPowerSyncDatabase,
+  PowerSyncBackendConnector,
+  PowerSyncCredentials,
+} from "@powersync/web";
 
-export const status = { updateRequired: false, waiting: false, lastUploadError: "" as string, uploads: 0 };
+export const status = {
+  updateRequired: false,
+  waiting: false,
+  lastUploadError: "" as string,
+  uploads: 0,
+};
 
 export class Connector implements PowerSyncBackendConnector {
   private cached: { token: string; expiresAt: number } | null = null;
-  constructor(private user: string, private dataVersion: number, private dev: string) {}
+  constructor(
+    private user: string,
+    private dataVersion: number,
+    private dev: string,
+  ) {}
 
   private async token() {
     if (this.cached && this.cached.expiresAt - Date.now() > 10_000) return this.cached.token;
@@ -45,7 +58,10 @@ export class Connector implements PowerSyncBackendConnector {
     try {
       res = await fetch(`/api/d/${this.dev}/upload`, {
         method: "POST",
-        headers: { authorization: `Bearer ${await this.token()}`, "x-data-version": String(this.dataVersion) },
+        headers: {
+          authorization: `Bearer ${await this.token()}`,
+          "x-data-version": String(this.dataVersion),
+        },
         body: JSON.stringify({ ops }),
       });
     } catch (e) {
