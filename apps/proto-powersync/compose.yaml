@@ -1,0 +1,56 @@
+name: lists
+
+services:
+  ps-postgres:
+    image: postgres:17-alpine
+    container_name: ps-postgres
+    restart: "no"
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=60
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "127.0.0.1:15433:5432"
+    volumes:
+      - ps-pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ps-powersync:
+    image: journeyapps/powersync-service:1.26.1
+    container_name: ps-powersync
+    restart: "no"
+    depends_on:
+      ps-postgres:
+        condition: service_healthy
+    command: ["start", "-r", "unified"]
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      PS_DATABASE_URI: postgresql://powersync_role:powersync_pw@ps-postgres:5432/app
+      PS_STORAGE_URI: postgresql://powersync_storage:storage_pw@ps-postgres:5432/psstorage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - ./docker/service.yaml:/config/service.yaml:ro
+      - ./docker/sync-config.yaml:/config/sync-config.yaml:ro
+
+volumes:
+  ps-pgdata:
+    name: ps-pgdata

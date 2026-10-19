@@ -1,0 +1,14 @@
+config:
+  edition: 3
+
+streams:
+  mine:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM items WHERE user_id = auth.user_id()
+      - SELECT * FROM seasons WHERE user_id = auth.user_id()
+  catalog:
+    auto_subscribe: true
+    query: SELECT * FROM shows WHERE id IN (SELECT tmdb_id FROM items WHERE user_id = auth.user_id() AND deleted_at IS NULL AND tmdb_id IS NOT NULL)
+  item_one:
+    query: SELECT * FROM items WHERE id = subscription.parameter('id') AND user_id = auth.user_id()
