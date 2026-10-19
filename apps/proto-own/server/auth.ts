@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "node:http";
+
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 export const AUDIENCE = "lists";
@@ -10,7 +11,10 @@ export async function ownerOf(req: IncomingMessage): Promise<string | null> {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) return null;
   try {
-    const { payload } = await jwtVerify(header.slice(7), jwks, { audience: AUDIENCE, algorithms: ["EdDSA"] });
+    const { payload } = await jwtVerify(header.slice(7), jwks, {
+      audience: AUDIENCE,
+      algorithms: ["EdDSA"],
+    });
     return payload.sub ?? null;
   } catch {
     return null;

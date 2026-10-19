@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { admin, Device, queueEmpty, resetVersions, uid, until } from "./helpers.ts";
 
 test.afterEach(resetVersions);
@@ -33,7 +34,11 @@ test("отказ сервера в ответе, пришедшем в стар�
   expect(await d.item(id, fresh)).toMatchObject({ rating: 50, dv: 2 });
 
   release();
-  await until(() => d.status(old), (s) => s.copyNewer, "старая вкладка получила отказ уже при копии новее себя");
+  await until(
+    () => d.status(old),
+    (s) => s.copyNewer,
+    "старая вкладка получила отказ уже при копии новее себя",
+  );
   await admin("/admin/deploy", { to: 2 });
   await old.close(); // отправку берёт новая вкладка
   d.page = fresh;

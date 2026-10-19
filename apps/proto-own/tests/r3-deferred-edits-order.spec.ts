@@ -1,5 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { admin, Device, queueEmpty, resetVersions, serverItem, sql, uid, until } from "./helpers.ts";
+
+import {
+  admin,
+  Device,
+  queueEmpty,
+  resetVersions,
+  serverItem,
+  sql,
+  uid,
+  until,
+} from "./helpers.ts";
 
 test.afterEach(resetVersions);
 
@@ -26,12 +36,20 @@ test("правка, сделанная после обновления, не о�
   await a.online();
   // Маркер приезжает, только когда после выхода в сеть прошёл целый цикл: сначала отправка всего, что можно отправить, потом загрузка.
   await sql("UPDATE items SET note = 'маркер' WHERE id = $1", [marker]);
-  await until(() => a.item(marker), (r) => r?.note === "маркер", "после выхода в сеть прошёл цикл синхронизации");
+  await until(
+    () => a.item(marker),
+    (r) => r?.note === "маркер",
+    "после выхода в сеть прошёл цикл синхронизации",
+  );
 
   // Исправленная сборка: отложенная правка переводится и уходит.
   await a.restart({ dv: 3, faultyStep: false });
   await queueEmpty(a);
   expect((await serverItem(id)).note).toBe("новая заметка");
-  await until(() => a.item(id), (r) => r.note === "новая заметка", "устройство сошлось с сервером");
+  await until(
+    () => a.item(id),
+    (r) => r.note === "новая заметка",
+    "устройство сошлось с сервером",
+  );
   await a.kill();
 });

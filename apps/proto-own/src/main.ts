@@ -1,4 +1,5 @@
 import { liveQuery } from "dexie";
+
 import { DATA_VERSION, FAULTY_STEP } from "./config.ts";
 import { db } from "./db.ts";
 import { faultySteps } from "./faulty.ts";
@@ -19,7 +20,9 @@ function show() {
     queue: await db.queue.count(),
     stuck: await stuckCount(),
   })).subscribe((view) => {
-    listEl.innerHTML = view.items.map((r) => `<li data-id="${r.id}">${r.title} ${r.status} ${r.rating ?? ""}</li>`).join("");
+    listEl.innerHTML = view.items
+      .map((r) => `<li data-id="${r.id}">${r.title} ${r.status} ${r.rating ?? ""}</li>`)
+      .join("");
     statusEl.textContent = `записей ${view.items.length}, отметок ${view.marks}, сериалов ${view.shows}, в очереди ${view.queue}, ждут обновления ${view.stuck}`;
     firstRender ||= performance.now();
     (window as any).__ready ??= { firstRender, count: view.items.length };
@@ -34,6 +37,15 @@ async function start() {
 }
 
 (window as any).proto = {
-  db, status, kick, reloadAll, reloadOne, createItem, editItem, deleteItem, restoreItem, markSeason,
+  db,
+  status,
+  kick,
+  reloadAll,
+  reloadOne,
+  createItem,
+  editItem,
+  deleteItem,
+  restoreItem,
+  markSeason,
 };
 start().catch((error) => ((window as any).__error = String(error)));

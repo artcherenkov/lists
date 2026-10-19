@@ -1,5 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { admin, Device, queueEmpty, resetVersions, serverItem, sql, uid, until } from "./helpers.ts";
+
+import {
+  admin,
+  Device,
+  queueEmpty,
+  resetVersions,
+  serverItem,
+  sql,
+  uid,
+  until,
+} from "./helpers.ts";
 
 test.afterEach(resetVersions);
 
@@ -24,10 +34,19 @@ test("7. обновление без сети: копия переводится
   await a.restart({ dv: 2 });
   const rating = async (id: string) => (await a.item(id))?.rating ?? null;
   expect(await a.eval(() => document.querySelectorAll("#list li").length)).toBe(5);
-  expect([await rating(u), await rating(y), await rating(x), await rating(z), await rating(n)]).toEqual([4, 5, 3, null, 5]);
+  expect([
+    await rating(u),
+    await rating(y),
+    await rating(x),
+    await rating(z),
+    await rating(n),
+  ]).toEqual([4, 5, 3, null, 5]);
 
   const queue = await a.queue();
-  expect(queue.map((e) => [e.id, e.v, e.fields.rating])).toEqual([[x, 2, 3], [n, 2, 5]]);
+  expect(queue.map((e) => [e.id, e.v, e.fields.rating])).toEqual([
+    [x, 2, 3],
+    [n, 2, 5],
+  ]);
   expect(Object.keys(queue[0].fields).sort()).toEqual(["rating", "updated_at"]);
 
   await admin("/admin/deploy", { to: 2 });
@@ -42,7 +61,11 @@ test("7. обновление без сети: копия переводится
   expect(await serverItem(x)).toMatchObject({ rating: 3, dv: 2 });
   expect(await serverItem(n)).toMatchObject({ rating: 5, dv: 2 });
   for (const row of await sql("SELECT id, rating FROM items WHERE user_id = $1", [user])) {
-    await until(() => rating(row.id), (r) => r === row.rating, `копия сошлась с сервером: ${row.id}`);
+    await until(
+      () => rating(row.id),
+      (r) => r === row.rating,
+      `копия сошлась с сервером: ${row.id}`,
+    );
   }
   await a.kill();
 });

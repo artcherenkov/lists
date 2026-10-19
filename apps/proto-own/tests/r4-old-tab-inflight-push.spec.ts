@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { Device, queueEmpty, resetVersions, uid, until } from "./helpers.ts";
 
 test.afterEach(resetVersions);
@@ -34,7 +35,11 @@ test("ответ на отправку старой вкладки не клад
   expect(await d.item(id, fresh)).toMatchObject({ rating: 3, dv: 2 });
 
   release();
-  await until(() => d.queue(fresh), (q) => q.length === 0, "старая вкладка обработала ответ");
+  await until(
+    () => d.queue(fresh),
+    (q) => q.length === 0,
+    "старая вкладка обработала ответ",
+  );
   expect(await d.item(id, fresh)).toMatchObject({ rating: 3, dv: 2 });
   await d.kill();
 });

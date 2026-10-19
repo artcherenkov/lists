@@ -1,5 +1,7 @@
-import pg from "pg";
 import type { PullResponse, Row } from "../shared/protocol.ts";
+
+import pg from "pg";
+
 import { inTransaction, pool, setting } from "./db.ts";
 
 export const PAGE_SIZE = 500;
@@ -16,10 +18,19 @@ const PUBLIC = `- 'user_id' - 'seq'`;
  * Сериал записи из этой страницы – при каждом изменении записи: так сериал, давно лежащий в каталоге,
  * приезжает к тому, кто его только что добавил, а ушедший – помечается удалённым.
  */
-export async function pullPage(user: string, cp: number, epoch: string | undefined, limit = PAGE_SIZE): Promise<PullResponse> {
+export async function pullPage(
+  user: string,
+  cp: number,
+  epoch: string | undefined,
+  limit = PAGE_SIZE,
+): Promise<PullResponse> {
   return inTransaction(async (client) => {
     const serverEpoch = await setting(client, "epoch");
-    const last = (await client.query("SELECT CASE WHEN is_called THEN last_value ELSE 0 END AS n FROM change_seq")).rows[0].n;
+    const last = (
+      await client.query(
+        "SELECT CASE WHEN is_called THEN last_value ELSE 0 END AS n FROM change_seq",
+      )
+    ).rows[0].n;
     const empty = { items: [], seasons: [], shows: [], goneShows: [] };
     if ((epoch && epoch !== serverEpoch) || cp > Number(last)) {
       return { epoch: serverEpoch, reset: true, cp: 0, more: false, ...empty };
@@ -39,7 +50,11 @@ export async function pullPage(user: string, cp: number, epoch: string | undefin
     const more = found.rows.length > limit;
     const rows = found.rows.slice(0, limit);
     const page: PullResponse = {
-      epoch: serverEpoch, reset: false, more, cp: rows.length ? Number(rows[rows.length - 1].seq) : cp, ...empty,
+      epoch: serverEpoch,
+      reset: false,
+      more,
+      cp: rows.length ? Number(rows[rows.length - 1].seq) : cp,
+      ...empty,
     };
     for (const { t, row } of rows) page[t as "items" | "seasons" | "shows"].push(row);
 
@@ -65,10 +80,19 @@ const wakeAll = () => waiters.forEach((wake) => wake());
 
 /** Слушатель `changed`. При обрыве переподключается; пока его нет, клиенты узнают об изменениях по таймауту ожидания. */
 export function startListener(): void {
-  const client = new pg.Client({ host: "127.0.0.1", port: 15435, user: "postgres", password: "postgres", database: "app" });
+  const client = new pg.Client({
+    host: "127.0.0.1",
+    port: 15435,
+    user: "postgres",
+    password: "postgres",
+    database: "app",
+  });
   client.on("notification", wakeAll);
   client.on("error", () => setTimeout(startListener, 1000));
-  client.connect().then(() => client.query("LISTEN changed")).catch(() => setTimeout(startListener, 1000));
+  client
+    .connect()
+    .then(() => client.query("LISTEN changed"))
+    .catch(() => setTimeout(startListener, 1000));
 }
 
 const WAIT_MS = 25_000;

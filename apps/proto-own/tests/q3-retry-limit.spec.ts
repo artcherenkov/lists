@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { admin, Device, queueEmpty, serverItem, sql, uid, until } from "./helpers.ts";
 
 test.afterEach(() => admin("/admin/poison", { id: null }));
@@ -22,7 +23,11 @@ test("застрявшая правка снимается с очереди п�
 
   // Пока X застряла, загрузка идёт, а правка Y ждёт её, чтобы не нарушить порядок.
   await sql("UPDATE items SET note = 'с сервера' WHERE id = $1", [z]);
-  await until(() => d.item(z), (r) => r?.note === "с сервера", "чтение не остановилось");
+  await until(
+    () => d.item(z),
+    (r) => r?.note === "с сервера",
+    "чтение не остановилось",
+  );
   expect((await serverItem(y)).title).toBe("Y");
 
   await queueEmpty(d, 30_000);

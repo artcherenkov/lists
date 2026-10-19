@@ -1,6 +1,8 @@
-import Dexie from "dexie";
-import type { Table } from "dexie";
 import type { Edit, Entity, Fields, Row } from "../shared/protocol.ts";
+import type { Table } from "dexie";
+
+import Dexie from "dexie";
+
 import { USER } from "./config.ts";
 
 /** Строка копии. `dv` – версия данных, в которой она лежит; `server` – сервер эту строку знает. */
@@ -42,5 +44,6 @@ class ListsDb extends Dexie {
 
 export const db = new ListsDb();
 
-export const getMeta = async <T>(key: string): Promise<T | undefined> => (await db.meta.get(key))?.value as T | undefined;
+export const getMeta = async <T>(key: string): Promise<T | undefined> =>
+  (await db.meta.get(key))?.value as T | undefined;
 export const setMeta = (key: string, value: unknown) => db.meta.put({ key, value });

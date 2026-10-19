@@ -9,8 +9,8 @@ export interface Step {
   edit(table: Entity, fields: Fields, row: Row | undefined): Fields;
 }
 
-
-const toStars = (rating: unknown) => (rating == null ? null : Math.floor(((rating as number) + 1) / 2));
+const toStars = (rating: unknown) =>
+  rating == null ? null : Math.floor(((rating as number) + 1) / 2);
 
 /** «2024-5» становится «2024-05». Значения другого вида шаг не знает. */
 export function padMonth(value: unknown): unknown {
@@ -31,7 +31,9 @@ export const steps: Record<number, Step> = {
   },
   // Месяц просмотра – всегда две цифры.
   2: {
-    entity: (table, row) => (table === "items" ? (mapField(row, "watched_month", padMonth) as Row) : row),
-    edit: (table, fields) => (table === "items" ? mapField(fields, "watched_month", padMonth) : fields),
+    entity: (table, row) =>
+      table === "items" ? (mapField(row, "watched_month", padMonth) as Row) : row,
+    edit: (table, fields) =>
+      table === "items" ? mapField(fields, "watched_month", padMonth) : fields,
   },
 };

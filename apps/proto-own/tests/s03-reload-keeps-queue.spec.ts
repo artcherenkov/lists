@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { Device, queueEmpty, serverItem, sql, uid, until } from "./helpers.ts";
 
 test("3. новая загрузка с сервера, в том числе одной записи, не стирает очередь", async ({}, info) => {
@@ -15,13 +16,21 @@ test("3. новая загрузка с сервера, в том числе о�
   expect(await d.queue()).toHaveLength(1);
 
   await sql("UPDATE items SET note = 'с сервера' WHERE id = $1", [x]);
-  await until(() => d.item(x), (r) => r?.note === "с сервера", "правка сервера приехала при непустой очереди");
+  await until(
+    () => d.item(x),
+    (r) => r?.note === "с сервера",
+    "правка сервера приехала при непустой очереди",
+  );
   expect((await d.item(x)).title).toBe("X-local");
   expect(await d.queue()).toHaveLength(1);
 
   await d.proto("reloadAll");
   await sql("UPDATE items SET note = 'ещё раз' WHERE id = $1", [x]);
-  await until(() => d.item(x), (r) => r?.note === "ещё раз", "полная перезагрузка дошла");
+  await until(
+    () => d.item(x),
+    (r) => r?.note === "ещё раз",
+    "полная перезагрузка дошла",
+  );
   expect(await d.queue()).toHaveLength(1);
   expect((await d.item(x)).title).toBe("X-local");
 

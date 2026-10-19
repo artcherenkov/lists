@@ -1,8 +1,9 @@
-import { itemIdOfSeason, seasonId } from "../shared/protocol.ts";
 import type { Entity, Fields, Row } from "../shared/protocol.ts";
+import type { LocalRow } from "./db.ts";
+
+import { itemIdOfSeason, seasonId } from "../shared/protocol.ts";
 import { DATA_VERSION, USER } from "./config.ts";
 import { db, getMeta } from "./db.ts";
-import type { LocalRow } from "./db.ts";
 
 export class UpdateRequired extends Error {
   constructor() {
@@ -16,28 +17,54 @@ export async function assertCopyNotNewer(): Promise<void> {
 }
 
 const now = () => new Date().toISOString();
-export const itemIdOf = (entity: Entity, id: string) => (entity === "items" ? id : itemIdOfSeason(id));
+export const itemIdOf = (entity: Entity, id: string) =>
+  entity === "items" ? id : itemIdOfSeason(id);
 
 /**
  * Правка человека: строка копии и правка в очереди пишутся одной транзакцией. Правка несёт только
  * изменённые поля и время «изменена»; `localOnly` – то, что нужно только строке копии.
  */
-async function edit(entity: Entity, id: string, fields: Fields, localOnly: Fields = {}): Promise<void> {
+async function edit(
+  entity: Entity,
+  id: string,
+  fields: Fields,
+  localOnly: Fields = {},
+): Promise<void> {
   await db.transaction("rw", [db.items, db.seasons, db.queue, db.meta], async () => {
     await assertCopyNotNewer();
     const current = await db[entity].get(id);
     // Форма, сохраняющая строку целиком, шлёт только то, что изменилось.
-    const touched = current ? Object.entries(fields).filter(([name, value]) => current[name] !== value) : Object.entries(fields);
+    const touched = current
+      ? Object.entries(fields).filter(([name, value]) => current[name] !== value)
+      : Object.entries(fields);
     if (current && touched.length === 0) return;
     const stamped = { ...Object.fromEntries(touched), updated_at: now() };
-    await db[entity].put({ ...localOnly, ...current, ...stamped, id, dv: DATA_VERSION } as LocalRow);
+    await db[entity].put({
+      ...localOnly,
+      ...current,
+      ...stamped,
+      id,
+      dv: DATA_VERSION,
+    } as LocalRow);
     await db.queue.add({
-      key: crypto.randomUUID(), entity, id, fields: stamped, v: DATA_VERSION, acct: USER, attempts: 0,
+      key: crypto.randomUUID(),
+      entity,
+      id,
+      fields: stamped,
+      v: DATA_VERSION,
+      acct: USER,
+      attempts: 0,
     });
   });
 }
 
-export async function createItem(input: { kind: string; title: string; tmdb_id?: string; year?: number; rating?: number }): Promise<string> {
+export async function createItem(input: {
+  kind: string;
+  title: string;
+  tmdb_id?: string;
+  year?: number;
+  rating?: number;
+}): Promise<string> {
   const id = crypto.randomUUID();
   await edit("items", id, { status: "want", added_at: now(), deleted_at: null, ...input });
   return id;

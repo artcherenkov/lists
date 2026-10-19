@@ -5,8 +5,18 @@ export type Row = Fields & { id: string };
 /** Что человек может править у записи и у отметки; остальное ставит сервер или создатель. */
 export const EDITABLE: Record<Entity, readonly string[]> = {
   items: [
-    "kind", "title", "year", "tmdb_id", "poster_path", "status", "rating",
-    "watched_month", "note", "added_at", "updated_at", "deleted_at",
+    "kind",
+    "title",
+    "year",
+    "tmdb_id",
+    "poster_path",
+    "status",
+    "rating",
+    "watched_month",
+    "note",
+    "added_at",
+    "updated_at",
+    "deleted_at",
   ],
   seasons: ["state", "updated_at"],
 };

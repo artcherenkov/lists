@@ -1,15 +1,20 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
+
 // Стенд для тестов: статика из dist и прокси /api/d/<устройство>/* к серверу. Прокси умеет то, чего
 // не умеет браузер: «сети нет» для одного устройства (обрыв соединений, в том числе долгого запроса),
 // недоступная отправка при работающей загрузке и потерянный ответ после того, как сервер запрос принял.
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer, request } from "node:http";
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
 
 const PORT = 14373;
 const SERVER_PORT = 13300;
 const DIST = new URL("../dist", import.meta.url).pathname;
-const TYPES: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
+const TYPES: Record<string, string> = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+};
 
 interface Net {
   offline: boolean;
@@ -20,7 +25,8 @@ interface Net {
 }
 const devices = new Map<string, Net>();
 const net = (dev: string): Net => {
-  if (!devices.has(dev)) devices.set(dev, { offline: false, blockPush: false, losePush: 0, open: new Set() });
+  if (!devices.has(dev))
+    devices.set(dev, { offline: false, blockPush: false, losePush: 0, open: new Set() });
   return devices.get(dev)!;
 };
 
@@ -42,7 +48,13 @@ function proxy(dev: string, rest: string, req: IncomingMessage, res: ServerRespo
   const isPush = rest.startsWith("/push");
   if (state.offline || (isPush && state.blockPush)) return void req.socket.destroy();
   const upstream = request(
-    { host: "127.0.0.1", port: SERVER_PORT, path: "/api" + rest, method: req.method, headers: req.headers },
+    {
+      host: "127.0.0.1",
+      port: SERVER_PORT,
+      path: "/api" + rest,
+      method: req.method,
+      headers: req.headers,
+    },
     (answer) => {
       if (isPush && state.losePush > 0) {
         state.losePush--;
@@ -66,7 +78,11 @@ createServer((req, res) => {
   const m = /^\/api\/d\/([^/]+)(\/.*)$/.exec(url.pathname);
   if (m) return proxy(m[1]!, m[2]! + url.search, req, res);
   let file = normalize(join(DIST, url.pathname === "/" ? "index.html" : url.pathname));
-  if (!file.startsWith(DIST) || !existsSync(file) || statSync(file).isDirectory()) file = join(DIST, "index.html");
-  res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream", "cache-control": "no-store" });
+  if (!file.startsWith(DIST) || !existsSync(file) || statSync(file).isDirectory())
+    file = join(DIST, "index.html");
+  res.writeHead(200, {
+    "content-type": TYPES[extname(file)] ?? "application/octet-stream",
+    "cache-control": "no-store",
+  });
   createReadStream(file).pipe(res);
 }).listen(PORT, "127.0.0.1", () => console.log("preview on", PORT));

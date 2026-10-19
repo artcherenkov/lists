@@ -1,7 +1,9 @@
-import { expect, test } from "@playwright/test";
 import type { Step } from "../shared/steps.ts";
-import { deployVersion } from "../server/migrate.ts";
+
+import { expect, test } from "@playwright/test";
+
 import { pool } from "../server/db.ts";
+import { deployVersion } from "../server/migrate.ts";
 import { api, edit, resetVersions, sql, token, uid } from "./helpers.ts";
 
 test.afterEach(resetVersions);
@@ -15,12 +17,21 @@ test("выкладка записывает на сервере все поля,
   await resetVersions();
   const id = uid("row");
   const created = await api("/api/push", {
-    token: await token(user), dv: 1, json: { edits: [edit(user, uid("k"), "items", id, { kind: "film", title: "Дюна", rating: 8, note: "до" })] },
+    token: await token(user),
+    dv: 1,
+    json: {
+      edits: [
+        edit(user, uid("k"), "items", id, { kind: "film", title: "Дюна", rating: 8, note: "до" }),
+      ],
+    },
   });
   expect(created.body.results[0].status).toBe("ok");
 
   const step: Step = {
-    entity: (table, row) => (table === "items" && row.user_id === user ? { ...row, title: `${row.title} (переведена)`, note: "после", rating: 4 } : row),
+    entity: (table, row) =>
+      table === "items" && row.user_id === user
+        ? { ...row, title: `${row.title} (переведена)`, note: "после", rating: 4 }
+        : row,
     edit: (_table, fields) => fields,
   };
   await deployVersion(2, { 1: step });

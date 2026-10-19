@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { Device, queueEmpty, serverItem, uid, until } from "./helpers.ts";
 
 test("6. сервер отклоняет одну правку – очередь идёт дальше, клиент узнаёт об отказе, правка откатывается", async ({}, info) => {

@@ -1,9 +1,19 @@
+import type {
+  Edit,
+  EditResult,
+  Entity,
+  Fields,
+  PullResponse,
+  PushResponse,
+  Row,
+} from "../shared/protocol.ts";
+import type { LocalRow, QueuedEdit } from "./db.ts";
+
 import { liveQuery } from "dexie";
+
 import { EDITABLE } from "../shared/protocol.ts";
-import type { Edit, EditResult, Entity, Fields, PullResponse, PushResponse, Row } from "../shared/protocol.ts";
 import { API, DATA_VERSION, MAX_ATTEMPTS, RETRY_MS, USER } from "./config.ts";
 import { db, getMeta, setMeta } from "./db.ts";
-import type { LocalRow, QueuedEdit } from "./db.ts";
 import { applyServerRow, assertCopyNotNewer, itemIdOf, UpdateRequired } from "./store.ts";
 
 /** Что видит человек: почему синхронизация стоит. */
@@ -34,17 +44,27 @@ class Stopped extends Error {}
 let token: string | undefined;
 
 async function fetchToken(): Promise<string> {
-  const r = await fetch(`${API}/auth/token`, { method: "POST", body: JSON.stringify({ user: USER }) });
+  const r = await fetch(`${API}/auth/token`, {
+    method: "POST",
+    body: JSON.stringify({ user: USER }),
+  });
   token = ((await r.json()) as { token: string }).token;
   return token;
 }
 
 async function call<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   for (let attempt = 0; ; attempt++) {
-    const headers = { authorization: `Bearer ${token ?? (await fetchToken())}`, "x-data-version": String(DATA_VERSION) };
+    const headers = {
+      authorization: `Bearer ${token ?? (await fetchToken())}`,
+      "x-data-version": String(DATA_VERSION),
+    };
     let response: Response;
     try {
-      response = await fetch(`${API}${path}`, { ...init, headers, body: init.json ? JSON.stringify(init.json) : undefined });
+      response = await fetch(`${API}${path}`, {
+        ...init,
+        headers,
+        body: init.json ? JSON.stringify(init.json) : undefined,
+      });
     } catch (error) {
       if ((error as Error).name !== "AbortError") status.offline = true;
       throw error;
@@ -57,14 +77,24 @@ async function call<T>(path: string, init: RequestInit & { json?: unknown } = {}
     status.needLogin = response.status === 401;
     status.tooOld = response.status === 426;
     status.waiting = response.status === 503;
-    if (!response.ok) throw response.status >= 500 && response.status !== 503 ? new Error(`сервер ответил ${response.status}`) : new Stopped(`${response.status}`);
+    if (!response.ok)
+      throw response.status >= 500 && response.status !== 503
+        ? new Error(`сервер ответил ${response.status}`)
+        : new Stopped(`${response.status}`);
     return (await response.json()) as T;
   }
 }
 
 // --- отправка ---
 
-const wireEdit = ({ key, entity, id, fields, v, acct }: QueuedEdit): Edit => ({ key, entity, id, fields, v, acct });
+const wireEdit = ({ key, entity, id, fields, v, acct }: QueuedEdit): Edit => ({
+  key,
+  entity,
+  id,
+  fields,
+  v,
+  acct,
+});
 
 /**
  * Правки версии этой сборки по порядку; правка новее сборки ждёт обновления, старее – перевода.
@@ -88,7 +118,14 @@ async function sendable(): Promise<QueuedEdit[]> {
 async function pushQueue(): Promise<void> {
   for (let batch = await sendable(); batch.length; batch = await sendable()) {
     const epoch = (await getMeta<string>("epoch")) ?? "";
-    const { results, reset, epoch: serverEpoch } = await call<PushResponse>("/push", { method: "POST", json: { epoch, edits: batch.map(wireEdit) } });
+    const {
+      results,
+      reset,
+      epoch: serverEpoch,
+    } = await call<PushResponse>("/push", {
+      method: "POST",
+      json: { epoch, edits: batch.map(wireEdit) },
+    });
     if (reset) {
       // Базу восстановили из копии: правки не применялись. Сперва пересылаем строки, потом очередь идёт дальше.
       await restartFromServer(serverEpoch!);
@@ -112,7 +149,11 @@ async function countFailure(edit: QueuedEdit, result: EditResult): Promise<boole
     await db.queue.update(edit.n!, { attempts: edit.attempts + 1 });
     return false;
   }
-  await settle(edit, { ...result, status: "rejected", error: `не ушла за ${MAX_ATTEMPTS} попыток: ${result.error}` });
+  await settle(edit, {
+    ...result,
+    status: "rejected",
+    error: `не ушла за ${MAX_ATTEMPTS} попыток: ${result.error}`,
+  });
   return true;
 }
 
@@ -143,13 +184,25 @@ async function settle(edit: QueuedEdit, result: EditResult): Promise<void> {
         }
         // Строка другой версии (скрыта упавшим шагом): ждёт исправленной сборки, не удаляем.
         await db.queue.delete(edit.n!);
-        await db.rejections.add({ at: new Date().toISOString(), entity: edit.entity, id: edit.id, fields: edit.fields, error: result.error ?? "" });
+        await db.rejections.add({
+          at: new Date().toISOString(),
+          entity: edit.entity,
+          id: edit.id,
+          fields: edit.fields,
+          error: result.error ?? "",
+        });
         return;
       }
     }
     await db.queue.delete(edit.n!);
     if (result.status === "rejected") {
-      await db.rejections.add({ at: new Date().toISOString(), entity: edit.entity, id: edit.id, fields: edit.fields, error: result.error ?? "" });
+      await db.rejections.add({
+        at: new Date().toISOString(),
+        entity: edit.entity,
+        id: edit.id,
+        fields: edit.fields,
+        error: result.error ?? "",
+      });
     }
     if (result.row) await applyServerRow(edit.entity, result.row as Row & { dv: number });
     else if (result.status === "rejected") await db[edit.entity].delete(edit.id);
@@ -163,12 +216,21 @@ async function settle(edit: QueuedEdit, result: EditResult): Promise<void> {
  * если и полная правка будет отклонена, строку не пересылаем снова. Вызывать внутри транзакции с `queue`.
  */
 async function sendWhole(entity: Entity, row: LocalRow): Promise<void> {
-  const covered = await db.queue.where("[entity+id]").equals([entity, row.id]).filter((e) => e.v === DATA_VERSION).primaryKeys();
+  const covered = await db.queue
+    .where("[entity+id]")
+    .equals([entity, row.id])
+    .filter((e) => e.v === DATA_VERSION)
+    .primaryKeys();
   await db.queue.bulkDelete(covered);
   await db[entity].put(row);
   await db.queue.add({
-    key: crypto.randomUUID(), entity, id: row.id, fields: pick(row, EDITABLE[entity]),
-    v: DATA_VERSION, acct: USER, attempts: 0,
+    key: crypto.randomUUID(),
+    entity,
+    id: row.id,
+    fields: pick(row, EDITABLE[entity]),
+    v: DATA_VERSION,
+    acct: USER,
+    attempts: 0,
   });
 }
 
@@ -211,7 +273,8 @@ async function restartFromServer(epoch: string): Promise<void> {
   await db.transaction("rw", [db.items, db.seasons, db.shows, db.queue, db.meta], async () => {
     await assertCopyNotNewer();
     for (const entity of ["items", "seasons"] as Entity[]) {
-      for (const row of await db[entity].where("dv").equals(DATA_VERSION).toArray()) await sendWhole(entity, row);
+      for (const row of await db[entity].where("dv").equals(DATA_VERSION).toArray())
+        await sendWhole(entity, row);
     }
     await db.shows.clear();
     await setMeta("cp", 0);
@@ -230,7 +293,9 @@ export async function reloadAll(): Promise<void> {
 
 /** Загрузить заново одну запись или отметку, не трогая очередь. */
 export async function reloadOne(entity: Entity, id: string): Promise<void> {
-  const { row } = await call<{ row: (LocalRow & { dv: number }) | null }>(`/row?entity=${entity}&id=${encodeURIComponent(id)}`);
+  const { row } = await call<{ row: (LocalRow & { dv: number }) | null }>(
+    `/row?entity=${entity}&id=${encodeURIComponent(id)}`,
+  );
   if (!row) return;
   await db.transaction("rw", [db.items, db.seasons, db.queue, db.meta], async () => {
     await assertCopyNotNewer();
@@ -240,7 +305,11 @@ export async function reloadOne(entity: Entity, id: string): Promise<void> {
 
 /** Записи, которые не перевелись и скрыты, а сервер их знает: берём их заново, как говорит перевод данных. */
 async function reloadStuck(): Promise<void> {
-  for (const row of await db.items.where("dv").below(DATA_VERSION).filter((r) => !!r.server).toArray()) {
+  for (const row of await db.items
+    .where("dv")
+    .below(DATA_VERSION)
+    .filter((r) => !!r.server)
+    .toArray()) {
     await reloadOne("items", row.id);
   }
 }
@@ -277,7 +346,9 @@ async function idle(): Promise<void> {
     abort.abort();
     return;
   }
-  const waited = call(`/wait?cp=${(await getMeta<number>("cp")) ?? 0}`, { signal: abort.signal }).catch((e) => {
+  const waited = call(`/wait?cp=${(await getMeta<number>("cp")) ?? 0}`, {
+    signal: abort.signal,
+  }).catch((e) => {
     if ((e as Error).name !== "AbortError") throw e;
   });
   await Promise.race([waited, woken]);
@@ -335,5 +406,8 @@ export function startSync(): void {
   // Правку могла записать другая вкладка: Dexie сообщает об изменениях очереди между вкладками.
   liveQuery(() => db.queue.count()).subscribe(kick);
   addEventListener("online", kick);
-  document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && kick());
+  document.addEventListener(
+    "visibilitychange",
+    () => document.visibilityState === "visible" && kick(),
+  );
 }

@@ -1,14 +1,29 @@
 import { expect, test } from "@playwright/test";
 import { execSync } from "node:child_process";
-import { admin, COMPOSE, Device, queueEmpty, resetVersions, serverItem, sql, uid, until } from "./helpers.ts";
+
+import {
+  admin,
+  COMPOSE,
+  Device,
+  queueEmpty,
+  resetVersions,
+  serverItem,
+  sql,
+  uid,
+  until,
+} from "./helpers.ts";
 
 test.afterEach(resetVersions);
 
 const psql = (args: string, input?: string) =>
-  execSync(`${COMPOSE} exec -T own-postgres ${args}`, { input, maxBuffer: 256 * 1024 * 1024 }).toString();
+  execSync(`${COMPOSE} exec -T own-postgres ${args}`, {
+    input,
+    maxBuffer: 256 * 1024 * 1024,
+  }).toString();
 const backup = () => psql("pg_dump -U postgres --clean --if-exists app");
 const restore = (dump: string) => psql("psql -U postgres -v ON_ERROR_STOP=1 -q app", dump);
-const serverEpoch = async (): Promise<string> => (await sql("SELECT value FROM settings WHERE key = 'epoch'"))[0].value;
+const serverEpoch = async (): Promise<string> =>
+  (await sql("SELECT value FROM settings WHERE key = 'epoch'"))[0].value;
 const browserOf = (info: any) => info.project.name as "chromium";
 
 // Повторное ревью исправления F2: восстановление базы из копии на стыке с другими механизмами устройства.
@@ -27,7 +42,11 @@ test("после восстановления базы из копии устр�
   await queueEmpty(a);
   const dump = backup();
 
-  const lost: string = await a.proto("createItem", { kind: "film", title: "Создана после копии", rating: 3 });
+  const lost: string = await a.proto("createItem", {
+    kind: "film",
+    title: "Создана после копии",
+    rating: 3,
+  });
   await queueEmpty(a);
   await a.offline();
   await a.proto("editItem", lost, { rating: 9 });
@@ -36,7 +55,11 @@ test("после восстановления базы из копии устр�
   await admin("/admin/new-epoch");
 
   await a.online();
-  await until(() => serverItem(lost), (r) => r?.title === "Создана после копии" && r?.rating === 9, "запись с правкой вернулась на сервер");
+  await until(
+    () => serverItem(lost),
+    (r) => r?.title === "Создана после копии" && r?.rating === 9,
+    "запись с правкой вернулась на сервер",
+  );
   await queueEmpty(a);
   expect(await a.rejections()).toEqual([]);
   expect(await a.item(lost)).toMatchObject({ title: "Создана после копии", rating: 9 });
@@ -56,7 +79,11 @@ test("после восстановления базы из копии запи�
   await queueEmpty(a);
   const dump = backup();
 
-  const stuck: string = await a.proto("createItem", { kind: "film", title: "FAIL-после копии", rating: 8 });
+  const stuck: string = await a.proto("createItem", {
+    kind: "film",
+    title: "FAIL-после копии",
+    rating: 8,
+  });
   await queueEmpty(a);
   await a.offline();
   await a.proto("editItem", stuck, { rating: 6 }); // неотправленная правка записи, которой нет в копии
@@ -69,11 +96,21 @@ test("после восстановления базы из копии запи�
   await admin("/admin/deploy", { to: 3 });
   const epoch = await serverEpoch();
   await a.online();
-  await until(() => a.eval(() => (window as any).proto.db.meta.get("epoch")), (m) => m?.value === epoch, "устройство заметило восстановление");
+  await until(
+    () => a.eval(() => (window as any).proto.db.meta.get("epoch")),
+    (m) => m?.value === epoch,
+    "устройство заметило восстановление",
+  );
 
   await a.restart({ dv: 3, faultyStep: false }); // исправленная сборка
-  await until(() => serverItem(stuck), (r) => r?.title === "FAIL-после копии", "скрытая запись вернулась на сервер").catch(async (error) => {
-    throw new Error(`${error.message}; устройство: ${JSON.stringify(await a.item(stuck))}; отказы: ${JSON.stringify(await a.rejections())}`);
+  await until(
+    () => serverItem(stuck),
+    (r) => r?.title === "FAIL-после копии",
+    "скрытая запись вернулась на сервер",
+  ).catch(async (error) => {
+    throw new Error(
+      `${error.message}; устройство: ${JSON.stringify(await a.item(stuck))}; отказы: ${JSON.stringify(await a.rejections())}`,
+    );
   });
   expect(await serverItem(stuck)).toMatchObject({ rating: 3, dv: 3 });
   expect(await a.item(stuck)).toMatchObject({ title: "FAIL-после копии", rating: 3, dv: 3 });
@@ -94,7 +131,11 @@ test("старая вкладка-лидер, заметившая восста�
   await queueEmpty(d);
   const dump = backup();
 
-  const lost: string = await d.proto("createItem", { kind: "film", title: "Создана после копии", rating: 4 });
+  const lost: string = await d.proto("createItem", {
+    kind: "film",
+    title: "Создана после копии",
+    rating: 4,
+  });
   await queueEmpty(d);
 
   await d.offline();
@@ -104,13 +145,23 @@ test("старая вкладка-лидер, заметившая восста�
   expect(await d.item(lost, fresh)).toMatchObject({ dv: 2 });
 
   await d.online();
-  await until(() => d.status(old), (s) => s.copyNewer, "старая вкладка столкнулась с копией новее себя");
+  await until(
+    () => d.status(old),
+    (s) => s.copyNewer,
+    "старая вкладка столкнулась с копией новее себя",
+  );
   await admin("/admin/deploy", { to: 2 });
   await old.close(); // отправку берёт новая вкладка
   d.page = fresh;
 
-  await until(() => serverItem(lost), (r) => r?.title === "Создана после копии", "запись после копии вернулась на сервер").catch(async (error) => {
-    throw new Error(`${error.message}; устройство: ${JSON.stringify(await d.item(lost, fresh))}; эпоха устройства: ${JSON.stringify(await d.eval(() => (window as any).proto.db.meta.get("epoch"), undefined, fresh))}, сервера: ${await serverEpoch()}`);
+  await until(
+    () => serverItem(lost),
+    (r) => r?.title === "Создана после копии",
+    "запись после копии вернулась на сервер",
+  ).catch(async (error) => {
+    throw new Error(
+      `${error.message}; устройство: ${JSON.stringify(await d.item(lost, fresh))}; эпоха устройства: ${JSON.stringify(await d.eval(() => (window as any).proto.db.meta.get("epoch"), undefined, fresh))}, сервера: ${await serverEpoch()}`,
+    );
   });
   await queueEmpty(d);
   await d.kill();

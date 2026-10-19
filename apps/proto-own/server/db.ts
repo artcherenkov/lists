@@ -2,14 +2,22 @@ import { readFileSync } from "node:fs";
 import pg from "pg";
 
 export const pool = new pg.Pool({
-  host: "127.0.0.1", port: 15435, user: "postgres", password: "postgres", database: "app", max: 10,
+  host: "127.0.0.1",
+  port: 15435,
+  user: "postgres",
+  password: "postgres",
+  database: "app",
+  max: 10,
 });
 
 export async function setupSchema(): Promise<void> {
   await pool.query(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
 }
 
-export async function inTransaction<T>(fn: (client: pg.PoolClient) => Promise<T>, isolation = ""): Promise<T> {
+export async function inTransaction<T>(
+  fn: (client: pg.PoolClient) => Promise<T>,
+  isolation = "",
+): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query(`BEGIN ${isolation}`);

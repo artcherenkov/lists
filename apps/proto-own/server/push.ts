@@ -1,6 +1,7 @@
-import type pg from "pg";
-import { itemIdOfSeason } from "../shared/protocol.ts";
 import type { Edit, EditResult, Entity, PushResponse, Row } from "../shared/protocol.ts";
+import type pg from "pg";
+
+import { itemIdOfSeason } from "../shared/protocol.ts";
 import { inTransaction, setting } from "./db.ts";
 import { isEdit, itemError, MAX_ITEMS_PER_ACCOUNT, seasonError, versionGate } from "./rules.ts";
 
@@ -10,8 +11,16 @@ export const faults = { poisonedId: null as string | null };
 const PUBLIC = `- 'user_id' - 'seq'`;
 
 /** Строка, как она на сервере, – но только своя: чужой идентификатор ответом не выдаём. */
-export async function ownRow(client: pg.Pool | pg.PoolClient, entity: Entity, id: string, user: string): Promise<Row | null> {
-  const r = await client.query(`SELECT to_jsonb(t) ${PUBLIC} AS row FROM ${entity} t WHERE id = $1 AND user_id = $2`, [id, user]);
+export async function ownRow(
+  client: pg.Pool | pg.PoolClient,
+  entity: Entity,
+  id: string,
+  user: string,
+): Promise<Row | null> {
+  const r = await client.query(
+    `SELECT to_jsonb(t) ${PUBLIC} AS row FROM ${entity} t WHERE id = $1 AND user_id = $2`,
+    [id, user],
+  );
   return r.rows[0]?.row ?? null;
 }
 
@@ -25,7 +34,12 @@ export async function ownRow(client: pg.Pool | pg.PoolClient, entity: Entity, id
  * поэтому правка не ляжет в базу в форме, которую перевод уже прошёл, и в базу не той эпохи.
  * `dv` – версия данных клиента, `epoch` – эпоха, которую он помнит (пусто, пока загрузки не было).
  */
-export async function push(user: string, dv: number, epoch: unknown, rawEdits: unknown[]): Promise<PushResponse | { gate: NonNullable<ReturnType<typeof versionGate>> }> {
+export async function push(
+  user: string,
+  dv: number,
+  epoch: unknown,
+  rawEdits: unknown[],
+): Promise<PushResponse | { gate: NonNullable<ReturnType<typeof versionGate>> }> {
   return inTransaction(async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(1)");
     const cur = Number(await setting(client, "cur_dv"));
@@ -36,12 +50,23 @@ export async function push(user: string, dv: number, epoch: unknown, rawEdits: u
     const results: EditResult[] = [];
     for (const raw of rawEdits) {
       if (!isEdit(raw)) {
-        results.push({ key: String((raw as Edit)?.key), status: "rejected", error: "неверная форма правки" });
+        results.push({
+          key: String((raw as Edit)?.key),
+          status: "rejected",
+          error: "неверная форма правки",
+        });
         continue;
       }
-      const earlier = await client.query("SELECT status, error FROM applied_edits WHERE key = $1 AND user_id = $2", [raw.key, user]);
+      const earlier = await client.query(
+        "SELECT status, error FROM applied_edits WHERE key = $1 AND user_id = $2",
+        [raw.key, user],
+      );
       if (earlier.rows[0]) {
-        results.push({ key: raw.key, ...earlier.rows[0], row: await ownRow(client, raw.entity, raw.id, user) });
+        results.push({
+          key: raw.key,
+          ...earlier.rows[0],
+          row: await ownRow(client, raw.entity, raw.id, user),
+        });
         continue;
       }
       await client.query("SAVEPOINT edit");
@@ -49,11 +74,24 @@ export async function push(user: string, dv: number, epoch: unknown, rawEdits: u
         const error = await applyEdit(client, user, cur, raw);
         if (error) await client.query("ROLLBACK TO edit");
         const status = error ? "rejected" : "ok";
-        await client.query("INSERT INTO applied_edits (key, user_id, status, error) VALUES ($1, $2, $3, $4)", [raw.key, user, status, error]);
-        results.push({ key: raw.key, status, error: error ?? undefined, row: await ownRow(client, raw.entity, raw.id, user) });
+        await client.query(
+          "INSERT INTO applied_edits (key, user_id, status, error) VALUES ($1, $2, $3, $4)",
+          [raw.key, user, status, error],
+        );
+        results.push({
+          key: raw.key,
+          status,
+          error: error ?? undefined,
+          row: await ownRow(client, raw.entity, raw.id, user),
+        });
       } catch (e) {
         await client.query("ROLLBACK TO edit");
-        results.push({ key: raw.key, status: "failed", error: String((e as Error).message), row: await ownRow(client, raw.entity, raw.id, user) });
+        results.push({
+          key: raw.key,
+          status: "failed",
+          error: String((e as Error).message),
+          row: await ownRow(client, raw.entity, raw.id, user),
+        });
         break;
       }
     }
@@ -62,13 +100,22 @@ export async function push(user: string, dv: number, epoch: unknown, rawEdits: u
 }
 
 /** `null` – правка применена, иначе причина отказа (записи не изменены). */
-async function applyEdit(client: pg.PoolClient, user: string, cur: number, edit: Edit): Promise<string | null> {
+async function applyEdit(
+  client: pg.PoolClient,
+  user: string,
+  cur: number,
+  edit: Edit,
+): Promise<string | null> {
   if (faults.poisonedId === edit.id) throw new Error("сбой обработчика (тест)");
   if (edit.acct !== user) return "правка сделана другим аккаунтом";
   if (edit.v !== cur) return `версия правки ${edit.v}, версия сервера ${cur}`;
 
-  const found = await client.query(`SELECT to_jsonb(t) AS row, user_id FROM ${edit.entity} t WHERE id = $1`, [edit.id]);
-  if (found.rows[0] && found.rows[0].user_id !== user) return "идентификатор принадлежит другому аккаунту";
+  const found = await client.query(
+    `SELECT to_jsonb(t) AS row, user_id FROM ${edit.entity} t WHERE id = $1`,
+    [edit.id],
+  );
+  if (found.rows[0] && found.rows[0].user_id !== user)
+    return "идентификатор принадлежит другому аккаунту";
   const existing: Row | undefined = found.rows[0]?.row;
 
   let extra: Record<string, unknown> = {};
@@ -76,12 +123,17 @@ async function applyEdit(client: pg.PoolClient, user: string, cur: number, edit:
   if (edit.entity === "items") {
     error = itemError(edit.fields, existing, cur);
     if (!error && !existing) {
-      const count = await client.query("SELECT count(*)::int AS n FROM items WHERE user_id = $1", [user]);
+      const count = await client.query("SELECT count(*)::int AS n FROM items WHERE user_id = $1", [
+        user,
+      ]);
       if (count.rows[0].n >= MAX_ITEMS_PER_ACCOUNT) error = "слишком много записей";
     }
   } else {
     const itemId = itemIdOfSeason(edit.id);
-    const parent = await client.query("SELECT to_jsonb(t) AS row FROM items t WHERE id = $1 AND user_id = $2", [itemId, user]);
+    const parent = await client.query(
+      "SELECT to_jsonb(t) AS row FROM items t WHERE id = $1 AND user_id = $2",
+      [itemId, user],
+    );
     error = seasonError(edit.fields, parent.rows[0]?.row);
     extra = { item_id: itemId, season: Number(edit.id.slice(itemId.length + 1)) };
     if (!error && !Number.isInteger(extra.season)) error = "неверный номер сезона";
@@ -97,7 +149,10 @@ async function applyEdit(client: pg.PoolClient, user: string, cur: number, edit:
   } else {
     const names = ["id", ...columns].join(", ");
     const marks = ["id", ...columns].map((_, i) => `$${i + 1}`).join(", ");
-    await client.query(`INSERT INTO ${edit.entity} (${names}) VALUES (${marks})`, [edit.id, ...params]);
+    await client.query(`INSERT INTO ${edit.entity} (${names}) VALUES (${marks})`, [
+      edit.id,
+      ...params,
+    ]);
   }
   return null;
 }

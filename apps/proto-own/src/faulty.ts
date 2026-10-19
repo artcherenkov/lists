@@ -1,6 +1,7 @@
 // Только для тестов (`?faultyStep=1`): шаг 2 → 3 падает на записи с «FAIL» в названии и на правке с «FAIL»
 // в заметке, как упал бы шаг с ошибкой на неожиданных данных. Исправленная сборка – та же без этого параметра.
 import type { Step } from "../shared/steps.ts";
+
 import { steps } from "../shared/steps.ts";
 
 const boom = (value: unknown) => {

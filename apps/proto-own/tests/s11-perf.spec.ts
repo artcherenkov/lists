@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+
 import { Device, sql, uid, until } from "./helpers.ts";
 
 const RUNS = 9;
@@ -30,9 +31,21 @@ test("повторное открытие с 250 записями, 400 отме�
   const d = Device.create(info.project.name as "chromium", "perf", { user });
   const t0 = Date.now();
   await d.start();
-  await until(() => d.eval(async () => ((window as any).proto.db.items.count())), (n) => n === 250, "250 записей");
-  await until(() => d.eval(async () => (await (window as any).proto.db.seasons.count())), (n) => n === 400, "400 отметок");
-  await until(() => d.eval(async () => (await (window as any).proto.db.shows.count())), (n) => n === 150, "150 сериалов");
+  await until(
+    () => d.eval(async () => (window as any).proto.db.items.count()),
+    (n) => n === 250,
+    "250 записей",
+  );
+  await until(
+    () => d.eval(async () => await (window as any).proto.db.seasons.count()),
+    (n) => n === 400,
+    "400 отметок",
+  );
+  await until(
+    () => d.eval(async () => await (window as any).proto.db.shows.count()),
+    (n) => n === 150,
+    "150 сериалов",
+  );
   const firstLoad = Date.now() - t0;
 
   const times: number[] = [];
@@ -42,10 +55,15 @@ test("повторное открытие с 250 записями, 400 отме�
     // firstRender – миллисекунды от начала навигации до первого показа записей из базы
     for (let tries = 0; tries < 50; tries++) {
       const r = await d.eval(() => (window as any).__ready);
-      if (r.count === 250) { times.push(r.firstRender); break; }
+      if (r.count === 250) {
+        times.push(r.firstRender);
+        break;
+      }
       await d.page.waitForTimeout(50);
     }
   }
-  console.log(`PERF ${info.project.name}: первая загрузка ${firstLoad} мс; повторное открытие, мс: ${times.map((t) => t.toFixed(0)).join(" ")}; медиана ${median(times).toFixed(0)}`);
+  console.log(
+    `PERF ${info.project.name}: первая загрузка ${firstLoad} мс; повторное открытие, мс: ${times.map((t) => t.toFixed(0)).join(" ")}; медиана ${median(times).toFixed(0)}`,
+  );
   await d.kill();
 });

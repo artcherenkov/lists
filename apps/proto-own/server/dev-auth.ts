@@ -1,5 +1,6 @@
 // Подставной вход вместо better-auth: выдуманные аккаунты, ключ в памяти процесса.
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
+
 import { AUDIENCE } from "./auth.ts";
 
 const { publicKey, privateKey } = await generateKeyPair("EdDSA");

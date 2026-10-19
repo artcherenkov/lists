@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { Device, queueEmpty, serverItem, uid, until } from "./helpers.ts";
 
 test("1. запись без сети переживает перезагрузку и закрытие; после выхода в сеть очередь уходит", async ({}, info) => {
@@ -22,6 +23,11 @@ test("1. запись без сети переживает перезагруз�
 
   await d.online();
   await queueEmpty(d);
-  expect(await serverItem(id)).toMatchObject({ title: "Дюна", status: "watched", rating: 8, user_id: user });
+  expect(await serverItem(id)).toMatchObject({
+    title: "Дюна",
+    status: "watched",
+    rating: 8,
+    user_id: user,
+  });
   await d.kill();
 });

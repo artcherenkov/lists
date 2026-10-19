@@ -1,6 +1,7 @@
 import type { Entity } from "../shared/protocol.ts";
-import { steps } from "../shared/steps.ts";
 import type { Step } from "../shared/steps.ts";
+
+import { steps } from "../shared/steps.ts";
 import { DATA_VERSION } from "./config.ts";
 import { db, getMeta, setMeta } from "./db.ts";
 import { itemIdOf } from "./store.ts";

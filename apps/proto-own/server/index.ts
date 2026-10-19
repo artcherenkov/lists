@@ -1,8 +1,10 @@
-import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+
+import { createServer } from "node:http";
+
 import { ownerOf } from "./auth.ts";
-import { issueToken, jwks } from "./dev-auth.ts";
 import { pool, setting, setupSchema } from "./db.ts";
+import { issueToken, jwks } from "./dev-auth.ts";
 import { deployVersion } from "./migrate.ts";
 import { PAGE_SIZE, pullPage, startListener, waitForChanges } from "./pull.ts";
 import { faults, ownRow, push } from "./push.ts";
@@ -15,12 +17,21 @@ function readJson(req: IncomingMessage): Promise<any> {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
-      try { resolve(body ? JSON.parse(body) : {}); } catch (error) { reject(error); }
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (error) {
+        reject(error);
+      }
     });
   });
 }
 
-function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
+function send(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
 }
@@ -48,7 +59,8 @@ async function handleSync(req: IncomingMessage, res: ServerResponse, url: URL) {
     const body = await readJson(req);
     if (!Array.isArray(body.edits)) return send(res, 400, { error: "edits" });
     const outcome = await push(user, Number(req.headers["x-data-version"]), body.epoch, body.edits);
-    if ("gate" in outcome) return send(res, outcome.gate.status, outcome.gate.body, outcome.gate.headers);
+    if ("gate" in outcome)
+      return send(res, outcome.gate.status, outcome.gate.body, outcome.gate.headers);
     return send(res, 200, outcome);
   }
   if (url.pathname === "/api/pull") {
@@ -58,7 +70,9 @@ async function handleSync(req: IncomingMessage, res: ServerResponse, url: URL) {
   if (url.pathname === "/api/row") {
     const entity = url.searchParams.get("entity");
     if (entity !== "items" && entity !== "seasons") return send(res, 400, { error: "entity" });
-    return send(res, 200, { row: await ownRow(pool, entity, url.searchParams.get("id") ?? "", user) });
+    return send(res, 200, {
+      row: await ownRow(pool, entity, url.searchParams.get("id") ?? "", user),
+    });
   }
   if (url.pathname === "/api/wait") {
     const abort = new AbortController();
