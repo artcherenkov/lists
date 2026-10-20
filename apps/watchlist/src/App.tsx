@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ConnectedProfileSheet } from "./connected-profile-sheet.tsx";
+import { LoginVariants } from "./login-variants.tsx";
 import { searchSampleCatalog } from "./sample/sample-catalog.ts";
 import { useSampleList } from "./sample/use-sample-list.ts";
 import {
@@ -34,6 +35,8 @@ export function App() {
   const [adding, setAdding] = useState(false);
   const [openedId, setOpenedId] = useState<string>();
   const [profileOpen, setProfileOpen] = useState(false);
+  // Прототип вехи 6: без входа виден только экран входа, вход живёт до перезагрузки.
+  const [signedIn, setSignedIn] = useState(false);
 
   const tabItems = itemsOfTab(list.items, tab);
   const changedFilters = countChangedFilters(filters);
@@ -49,6 +52,8 @@ export function App() {
       action: { label: "Отменить", onClick: () => list.setDeleted(id, false) },
     });
   };
+
+  if (!signedIn) return <LoginVariants onSignedIn={() => setSignedIn(true)} />;
 
   return (
     <>
