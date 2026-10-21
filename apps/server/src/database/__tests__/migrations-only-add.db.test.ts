@@ -45,10 +45,11 @@ describe("проверка правила «только добавляют»", 
   const base = {
     name: "0001_base.sql",
     sql: `CREATE TABLE parent (id int PRIMARY KEY);
-          CREATE TABLE item (id int PRIMARY KEY, title text NOT NULL, code varchar(100), body text)`,
+          CREATE TABLE item (id int PRIMARY KEY, title text NOT NULL, code varchar(100), body text, status text);
+          CREATE TABLE event (id int, at date) PARTITION BY RANGE (at)`,
   };
 
-  test("новые таблицы, необязательная колонка, колонка с умолчанием или identity, умолчание колонке без него – можно", async () => {
+  test("новые таблицы, необязательная колонка, колонка с умолчанием или identity – можно", async () => {
     const additions = {
       name: "0002_additions.sql",
       sql: `CREATE TABLE tag (id int PRIMARY KEY, item_id int NOT NULL REFERENCES item ON DELETE CASCADE, name text UNIQUE);
@@ -57,7 +58,6 @@ describe("проверка правила «только добавляют»", 
             ALTER TABLE item ADD COLUMN note text;
             ALTER TABLE item ADD COLUMN rank int NOT NULL DEFAULT 0;
             ALTER TABLE item ADD COLUMN seq int GENERATED ALWAYS AS IDENTITY;
-            ALTER TABLE item ALTER COLUMN body SET DEFAULT '';
             CREATE INDEX item_title_idx ON item (title)`,
     };
 
@@ -92,14 +92,16 @@ describe("проверка правила «только добавляют»", 
     );
   });
 
-  test("удалить или изменить – нельзя", async () => {
+  test("удалить или изменить колонку, в том числе дать ей умолчание, – нельзя", async () => {
     const changes = {
       name: "0002_changes.sql",
       sql: `ALTER TABLE item ALTER COLUMN title DROP NOT NULL;
             ALTER TABLE item ALTER COLUMN code TYPE varchar(5);
             ALTER TABLE item ALTER COLUMN body TYPE text COLLATE "C";
             ALTER TABLE item ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
-            DROP TABLE parent`,
+            ALTER TABLE item ALTER COLUMN status SET DEFAULT 'active';
+            DROP TABLE parent;
+            DROP TABLE event`,
     };
 
     expect((await violationsByFile([base, changes])).sort()).toEqual(
@@ -107,6 +109,10 @@ describe("проверка правила «только добавляют»", 
         "0002_changes.sql: удалена таблица public.parent",
         "0002_changes.sql: удалена колонка public.parent.id",
         "0002_changes.sql: удалён уникальный индекс parent_pkey таблицы public.parent",
+        "0002_changes.sql: удалена таблица public.event",
+        "0002_changes.sql: удалена колонка public.event.id",
+        "0002_changes.sql: удалена колонка public.event.at",
+        "0002_changes.sql: изменена колонка public.item.status: text → text DEFAULT 'active'::text",
         "0002_changes.sql: изменена колонка public.item.title: text NOT NULL → text",
         "0002_changes.sql: изменена колонка public.item.code: character varying(100) → character varying(5)",
         '0002_changes.sql: изменена колонка public.item.body: text → text COLLATE "C"',
@@ -115,7 +121,7 @@ describe("проверка правила «только добавляют»", 
     );
   });
 
-  test("пересоздать таблицу, переопределить ограничение под тем же именем, сменить умолчание или вычисление – нельзя", async () => {
+  test("пересоздать таблицу, переопределить ограничение под тем же именем, сменить или убрать умолчание, сменить вычисление – нельзя", async () => {
     const guarded = {
       name: "0001_guarded.sql",
       sql: `CREATE TABLE item (
@@ -152,8 +158,8 @@ describe("проверка правила «только добавляют»", 
         "0002_redefinitions.sql: изменён уникальный индекс item_title_uidx таблицы public.item",
         "0002_redefinitions.sql: изменён триггер item_touch таблицы public.item",
         "0002_redefinitions.sql: изменён триггер item_audit таблицы public.item",
-        "0002_redefinitions.sql: изменено умолчание колонки public.item.title: ''::text → нет",
-        "0002_redefinitions.sql: изменено умолчание колонки public.item.status: 'active'::text → 'archived'::text",
+        "0002_redefinitions.sql: изменена колонка public.item.title: text NOT NULL DEFAULT ''::text → text NOT NULL",
+        "0002_redefinitions.sql: изменена колонка public.item.status: text DEFAULT 'active'::text → text DEFAULT 'archived'::text",
         "0002_redefinitions.sql: изменена колонка public.item.double_id: integer GENERATED ALWAYS AS ((id * 2)) → integer GENERATED ALWAYS AS ((id * 3))",
         "0002_redefinitions.sql: пересоздана таблица public.note",
       ].sort(),

@@ -11,14 +11,14 @@ import { checkNewMigrationName, writeMigration } from "../src/database/migration
  * Кладёт в миграции новым файлом SQL, которого базе после наших миграций не хватает до таблиц,
  * ожидаемых better-auth; `pnpm test:db` затем проверит, что файл только добавляет. Нужен после
  * обновления better-auth и правки полей плагина входа. Запуск – с именем нового файла:
- * `pnpm --filter server auth:sql 0002_telegram_login.sql`.
+ * `pnpm --filter server auth:sql NNNN_name.sql`, где NNNN – следующий номер.
  *
  * Сравнивает на временной базе тестов: в базе разработки бывают таблицы из чужих веток. Если
  * добавлять нечего или расхождение добавлением не исправить, файла не создаёт.
  */
 const name = process.argv[2];
 if (!name) {
-  console.error("Нужно имя нового файла: pnpm --filter server auth:sql 0002_telegram_login.sql");
+  console.error("Нужно имя нового файла: pnpm --filter server auth:sql NNNN_name.sql");
   process.exit(1);
 }
 // Имя проверяется до подъёма базы и расчёта: ошибка в нём видна сразу.

@@ -84,7 +84,7 @@ describe("миграции", () => {
     const unnumbered = { name: "fix_auth.sql", sql: "CREATE TABLE fix (id int)" };
 
     await expect(migrate(pool, [first, unnumbered])).rejects.toThrow(
-      "Имя миграции не по образцу 0002_telegram_login.sql – номер, затем строчная латиница, цифры и _: fix_auth.sql",
+      "Имя миграции не по образцу NNNN_name.sql – номер из четырёх цифр, _, строчная латиница, цифры и _: fix_auth.sql",
     );
     expect(await tables()).toEqual([]);
   });
@@ -102,6 +102,15 @@ describe("миграции", () => {
     await migrate(pool, [first, second]);
 
     expect(await migrate(pool, [first])).toEqual({ applied: [], unknown: ["0002_second.sql"] });
+  });
+
+  test("настройка сеанса из миграции не уходит в другие запросы пула", async () => {
+    const setsPath = { name: "0001_sets_path.sql", sql: "CREATE SCHEMA s; SET search_path = s" };
+
+    await migrate(pool, [setsPath]);
+
+    const result = await pool.query<{ search_path: string }>("SHOW search_path");
+    expect(result.rows[0]?.search_path).toBe('"$user", public');
   });
 
   test("два одновременных запуска применяют файл один раз", async () => {

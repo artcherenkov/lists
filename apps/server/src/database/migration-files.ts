@@ -2,8 +2,8 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
- * Файлы миграций релиза – где лежат и как называются: `0001_<что>.sql`, по порядку номеров.
- * Что миграции можно делать и как они применяются к базе – в `migrate.ts`.
+ * Файл миграции релиза. Имя – номер из четырёх цифр и что делает: `0001_auth.sql`; к базе их
+ * по порядку номеров применяет `migrate.ts`.
  */
 export interface Migration {
   name: string;
@@ -52,7 +52,7 @@ export function checkMigrationNames(names: string[]) {
   const misnamed = names.filter((name) => !MIGRATION_NAME.test(name));
   if (misnamed.length > 0) {
     throw new Error(
-      `Имя миграции не по образцу 0002_telegram_login.sql – номер, затем строчная латиница, цифры и _: ${misnamed.join(", ")}`,
+      `Имя миграции не по образцу NNNN_name.sql – номер из четырёх цифр, _, строчная латиница, цифры и _: ${misnamed.join(", ")}`,
     );
   }
   // Две ветки взяли один номер. Если первым выложен файл, который по имени идёт позже, следующий
