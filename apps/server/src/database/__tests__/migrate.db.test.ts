@@ -45,7 +45,9 @@ describe("миграции", () => {
   test("упавший файл откатывает весь запуск: не применяется ни один", async () => {
     const broken = { name: "0002_broken.sql", sql: "CREATE TABLE broken (id no_such_type)" };
 
-    await expect(migrate(pool, [first, broken])).rejects.toThrow('type "no_such_type"');
+    await expect(migrate(pool, [first, broken])).rejects.toThrow(
+      'Миграция 0002_broken.sql не применилась: type "no_such_type" does not exist',
+    );
     expect(await tables()).toEqual([]);
   });
 
@@ -80,23 +82,28 @@ describe("миграции", () => {
     expect(await tables()).not.toContain("third");
   });
 
-  test("отказывает в файлах, которые сами завершают транзакцию, ничего не применяя", async () => {
-    const commits = {
-      name: "0002_commits.sql",
-      sql: "BEGIN;\nCREATE TABLE commits (id int);\nCOMMIT;",
-    };
-    const rollsBack = { name: "0003_rolls_back.sql", sql: "CREATE TABLE back (id int); ROLLBACK" };
+  test.each([
+    "CREATE TABLE ends (id int);\nEND;",
+    "BEGIN;\nCREATE TABLE ends (id int);\ncommit;",
+    "CREATE TABLE ends (id int); /* готово */ COMMIT",
+    "CREATE TABLE ends (id int); ROLLBACK",
+    "CREATE TABLE ends (id int); ABORT",
+  ])(
+    "отказывает в файле, который сам управляет транзакцией, ничего не применяя: %j",
+    async (sql) => {
+      const ends = { name: "0002_ends.sql", sql };
 
-    await expect(migrate(pool, [first, commits, rollsBack])).rejects.toThrow(
-      "Миграция сама завершает транзакцию – уберите COMMIT и ROLLBACK: 0002_commits.sql, 0003_rolls_back.sql",
-    );
-    expect(await tables()).toEqual([]);
-  });
+      await expect(migrate(pool, [first, ends])).rejects.toThrow(
+        "Миграция 0002_ends.sql не применилась: EXECUTE of transaction commands is not implemented",
+      );
+      expect(await tables()).toEqual([]);
+    },
+  );
 
-  test("COMMIT внутри имени или строки – не завершение транзакции", async () => {
+  test("слова commit и rollback в колонке и строке – не управление транзакцией", async () => {
     const lookalike = {
       name: "0002_lookalike.sql",
-      sql: "CREATE TABLE commit_log (id int); COMMENT ON TABLE commit_log IS 'rollback не нужен'",
+      sql: "CREATE TABLE log (\n  commit text\n);\nCOMMENT ON TABLE log IS 'x; rollback later'",
     };
 
     expect((await migrate(pool, [first, lookalike])).applied).toEqual([

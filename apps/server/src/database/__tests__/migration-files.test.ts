@@ -14,7 +14,7 @@ describe("имя новой миграции", () => {
     );
   });
 
-  test("занятый номер – отказ, даже если имя идёт после занятого", async () => {
+  test("занятый номер – отказ", async () => {
     await expect(checkNewMigrationName("0001_zzz.sql")).rejects.toThrow(
       "Номер миграции повторяется: 0001",
     );

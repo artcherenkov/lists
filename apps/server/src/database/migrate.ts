@@ -11,10 +11,6 @@ export interface MigrationResult {
   unknown: string[];
 }
 
-// `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию и сняли блокировку: следующие
-// файлы шли бы без них, а упавший файл оставил бы базу наполовину.
-const TRANSACTION_END = /(^|;)\s*(COMMIT|ROLLBACK|ABORT)\b/im;
-
 // Номер блокировки миграций; любой постоянный, лишь бы не совпал с другими блокировками сервера.
 const MIGRATION_LOCK = 6_000_001;
 
@@ -35,22 +31,16 @@ const MIGRATION_LOCK = 6_000_001;
  * выкладки базу не трогает (решение 9 вехи 6). Типичные нарушения ловит тест
  * `__tests__/migrations-only-add.db.test.ts`, правило целиком проверяет ревью миграции.
  *
- * Файл не завершает транзакцию: `COMMIT`, `ROLLBACK` и `ABORT` в начале оператора запуск
- * отклоняет до применения. И не оставляет следующим файлам состояния сеанса: `SET` параметров
- * вроде `search_path` после файла снимает `RESET ALL`, а роль, `SET TRANSACTION` и временные
- * таблицы – нет, их в миграциях не используем.
+ * Файл не завершает общую транзакцию: он выполняется через `EXECUTE` в plpgsql, и `COMMIT`,
+ * `ROLLBACK` или `END` в нём Postgres отклоняет сам. Состояние сеанса следующим файлам файл
+ * не оставляет: `SET` параметров вроде `search_path` после него снимает `RESET ALL`, а роль, режим
+ * транзакции и временные таблицы `RESET ALL` не снимает – их в миграциях не используем.
  *
  * Применённый файл не меняют и не удаляют, в том числе через `git revert`, даже комментарий:
  * сверка идёт по сумме всего файла. Ошибку исправляет новый файл.
  */
 export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<MigrationResult> {
   checkMigrationNames(migrations.map((file) => file.name));
-  const ending = migrations.filter((file) => TRANSACTION_END.test(file.sql));
-  if (ending.length > 0) {
-    throw new Error(
-      `Миграция сама завершает транзакцию – уберите COMMIT и ROLLBACK: ${ending.map((file) => file.name).join(", ")}`,
-    );
-  }
   const files = [...migrations].sort((a, b) => (a.name < b.name ? -1 : 1));
   const client = await pool.connect();
   try {
@@ -79,9 +69,21 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
       }
     }
 
+    // `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию и сняли блокировку: следующие
+    // файлы шли бы без них, а упавший файл оставил бы базу наполовину. В `EXECUTE` их не принимает
+    // сам Postgres – в любом написании, в отличие от разбора текста файла.
+    await client.query(`CREATE FUNCTION pg_temp.run_migration(sql text) RETURNS void
+      LANGUAGE plpgsql AS $$ BEGIN EXECUTE sql; END $$`);
     const applied: string[] = [];
     for (const file of files.slice(common)) {
-      await client.query(file.sql);
+      try {
+        await client.query("SELECT pg_temp.run_migration($1)", [file.sql]);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`Миграция ${file.name} не применилась: ${reason}`, { cause: error });
+      }
+      // Сразу после файла: его `SET` не действует ни на служебные запросы запуска, ни на следующие
+      // файлы.
       await client.query("RESET ALL");
       await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
         file.name,
