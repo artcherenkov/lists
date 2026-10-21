@@ -1,10 +1,7 @@
-import type { ServerConfig } from "../config.ts";
+import type { AuthConfig } from "../auth/auth.ts";
 
-/** Настройки сервера в тестах; базу каждый тест берёт свою из `createTestDatabase`. */
-export const TEST_CONFIG: ServerConfig = {
-  databaseUrl: "задаёт база теста",
-  authSecret: "test-secret-0123456789-0123456789-0123456789",
+/** Настройки входа в тестах; базу каждый тест берёт свою из `createTestDatabase`. */
+export const TEST_AUTH_CONFIG: AuthConfig = {
   publicUrl: "http://localhost:5175",
-  host: "127.0.0.1",
-  port: 3400,
+  authSecret: "test-secret-0123456789-0123456789-0123456789",
 };

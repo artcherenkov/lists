@@ -20,20 +20,25 @@ async function backendPid(client: pg.PoolClient) {
 /** Обрывает соединение со стороны Postgres, как его перезапуск, и ждёт, пока пул это заметит. */
 async function terminateAndWait(killer: pg.PoolClient, pid: number | undefined) {
   const errors = vi.spyOn(console, "error").mockImplementation(() => {});
-  await killer.query("SELECT pg_terminate_backend($1)", [pid]);
-  await vi.waitFor(() => expect(errors).toHaveBeenCalled());
-  errors.mockRestore();
+  try {
+    await killer.query("SELECT pg_terminate_backend($1)", [pid]);
+    await vi.waitFor(() => expect(errors).toHaveBeenCalled());
+  } finally {
+    errors.mockRestore();
+  }
 }
 
 describe("обрыв соединения не роняет процесс, следующий запрос идёт по новому", () => {
   test("простаивающего в пуле", async () => {
     const idle = await pool.connect();
     const killer = await pool.connect();
-    const pid = await backendPid(idle);
-    idle.release();
-
-    await terminateAndWait(killer, pid);
-    killer.release();
+    try {
+      const pid = await backendPid(idle);
+      idle.release();
+      await terminateAndWait(killer, pid);
+    } finally {
+      killer.release();
+    }
 
     await expect(pool.query("SELECT 1 AS one")).resolves.toMatchObject({ rows: [{ one: 1 }] });
   });
@@ -41,10 +46,12 @@ describe("обрыв соединения не роняет процесс, сл
   test("взятого из пула между запросами", async () => {
     const held = await pool.connect();
     const killer = await pool.connect();
-
-    await terminateAndWait(killer, await backendPid(held));
-    killer.release();
-    held.release(true);
+    try {
+      await terminateAndWait(killer, await backendPid(held));
+    } finally {
+      killer.release();
+      held.release(true);
+    }
 
     await expect(pool.query("SELECT 1 AS one")).resolves.toMatchObject({ rows: [{ one: 1 }] });
   });

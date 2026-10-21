@@ -4,7 +4,7 @@ import type pg from "pg";
 
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import { TEST_CONFIG as config } from "../../__tests__/test-config.ts";
+import { TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { createAuth } from "../../auth/auth.ts";
 import { createPool } from "../../database/pool.ts";

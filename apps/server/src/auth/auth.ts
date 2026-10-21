@@ -14,7 +14,10 @@ const YEAR_SECONDS = 365 * 24 * 60 * 60;
  * Настройки better-auth (решения 5 и 13 плана, решения 3–5 вехи 6). Отдельно от `createAuth`,
  * потому что по ним же `scripts/auth-sql.ts` пишет SQL таблиц входа для миграции.
  */
-export function authOptions({ pool, config }: { pool: pg.Pool; config: ServerConfig }) {
+/** Настройки сервера, которые нужны входу. */
+export type AuthConfig = Pick<ServerConfig, "publicUrl" | "authSecret">;
+
+export function authOptions({ pool, config }: { pool: pg.Pool; config: AuthConfig }) {
   return {
     appName: "Lists",
     baseURL: config.publicUrl,
@@ -50,7 +53,7 @@ export function authOptions({ pool, config }: { pool: pg.Pool; config: ServerCon
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(dependencies: { pool: pg.Pool; config: ServerConfig }) {
+export function createAuth(dependencies: { pool: pg.Pool; config: AuthConfig }) {
   return betterAuth(authOptions(dependencies));
 }
 
@@ -63,6 +66,8 @@ export type Auth = ReturnType<typeof createAuth>;
  */
 export async function checkAuthSchema(auth: Auth) {
   const context = await auth.$context;
+  // Сверку выключает `advanced.database.validateSchema: false`; без неё сервер молча стартовал бы
+  // на чужой схеме.
   if (!context.checkSchema) {
     throw new Error("better-auth не сверяет схему базы: проверьте адаптер и advanced.database");
   }

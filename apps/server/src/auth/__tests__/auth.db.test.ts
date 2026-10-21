@@ -3,7 +3,7 @@ import type pg from "pg";
 
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { TEST_CONFIG as config } from "../../__tests__/test-config.ts";
+import { TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { checkAuthSchema, createAuth } from "../auth.ts";
 
@@ -33,6 +33,22 @@ describe("вход на базе с миграциями", () => {
     // Secure better-auth дописывает по имени `__Host-`, когда отдаёт cookie, а не в настройках.
     expect(context.authCookies.sessionToken.name).toBe("__Host-lists.session_token");
     expect(context.sessionConfig.expiresIn).toBe(365 * 24 * 60 * 60);
+  });
+
+  test("запись входа идёт транзакцией: при ошибке не остаётся ничего", async () => {
+    const { adapter, internalAdapter } = await auth.$context;
+    const email = "tg-44@telegram.invalid";
+
+    await expect(
+      adapter.transaction(async (transaction) => {
+        await transaction.create({
+          model: "user",
+          data: { name: "В", email, emailVerified: false },
+        });
+        throw new Error("сбой после создания человека");
+      }),
+    ).rejects.toThrow("сбой после создания человека");
+    expect(await internalAdapter.findUserByEmail(email)).toBeNull();
   });
 
   test("один аккаунт Telegram не привязать к двум людям", async () => {

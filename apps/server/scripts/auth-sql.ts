@@ -2,9 +2,10 @@ import { getMigrations } from "better-auth/db/migration";
 import process from "node:process";
 
 import preparePostgres from "../src/__tests__/prepare-postgres.ts";
-import { TEST_CONFIG } from "../src/__tests__/test-config.ts";
+import { TEST_AUTH_CONFIG } from "../src/__tests__/test-config.ts";
 import { createTestDatabase } from "../src/__tests__/test-database.ts";
 import { authOptions } from "../src/auth/auth.ts";
+import { findUnsafeAdditions } from "./unsafe-additions.ts";
 
 /**
  * Печатает SQL, которого базе после наших миграций не хватает до таблиц, ожидаемых better-auth:
@@ -17,9 +18,9 @@ import { authOptions } from "../src/auth/auth.ts";
 await preparePostgres();
 const database = await createTestDatabase();
 try {
-  const options = authOptions({ pool: database.pool, config: TEST_CONFIG });
+  const options = authOptions({ pool: database.pool, config: TEST_AUTH_CONFIG });
   const plan = await getMigrations(options, { throwOnUnsafe: false });
-  const problems = [...plan.unsafeChanges, ...plan.schemaProblems];
+  const problems = [...plan.unsafeChanges, ...plan.schemaProblems, ...findUnsafeAdditions(plan)];
   for (const problem of problems) {
     console.error(`Не сделать добавлением, нужна ручная миграция: ${problem}`);
   }

@@ -80,6 +80,15 @@ describe("миграции", () => {
     expect(await tables()).not.toContain("third");
   });
 
+  test("отказывает в файле без номера в имени, ничего не применяя", async () => {
+    const unnumbered = { name: "fix_auth.sql", sql: "CREATE TABLE fix (id int)" };
+
+    await expect(migrate(pool, [first, unnumbered])).rejects.toThrow(
+      "Имя миграции не по образцу 0001_что.sql: fix_auth.sql",
+    );
+    expect(await tables()).toEqual([]);
+  });
+
   test("база новее релиза – не ошибка: применённые неизвестные файлы перечисляются", async () => {
     await migrate(pool, [first, second]);
 

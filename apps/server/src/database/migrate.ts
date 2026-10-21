@@ -28,6 +28,9 @@ export interface MigrationResult {
 // Номер блокировки миграций; любой постоянный, лишь бы не совпал с другими блокировками сервера.
 const MIGRATION_LOCK = 6_000_001;
 
+// Номер в имени задаёт порядок: файл без номера встал бы после всех и заблокировал следующий.
+const MIGRATION_NAME = /^\d{4}_[a-z0-9_]+\.sql$/;
+
 // Где лежат миграции, знает только этот модуль.
 const MIGRATIONS_DIR = path.join(import.meta.dirname, "../migrations");
 
@@ -52,6 +55,12 @@ export async function readMigrations(): Promise<Migration[]> {
  * ветки или отменённого коммита, и не останется незамеченной правка применённого файла.
  */
 export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<MigrationResult> {
+  const misnamed = migrations.filter((file) => !MIGRATION_NAME.test(file.name));
+  if (misnamed.length > 0) {
+    throw new Error(
+      `Имя миграции не по образцу 0001_что.sql: ${misnamed.map((file) => file.name).join(", ")}`,
+    );
+  }
   const files = [...migrations].sort((a, b) => (a.name < b.name ? -1 : 1));
   const client = await pool.connect();
   let committed = false;
