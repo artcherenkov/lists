@@ -5,6 +5,7 @@ import {
   codeFromBot,
   expect,
   journalLine,
+  messageFromBot,
   openJournal,
   openProfile,
   test,
@@ -37,9 +38,9 @@ test("код из бота впускает, вход переживает пе�
 }) => {
   await page.goto("/");
 
-  await test.step("код из сообщения бота, вставленный с пробелом, сразу впускает", async () => {
-    const code = await codeFromBot(server.api, telegramUser);
-    await codeField(page).fill(`${code.slice(0, 4)} ${code.slice(4)}`);
+  await test.step("сообщение бота, вставленное в поле целиком, сразу впускает", async () => {
+    const { message } = await messageFromBot(server.api, telegramUser);
+    await codeField(page).fill(message);
 
     await expect(profileButton(page)).toBeVisible();
   });
@@ -192,7 +193,12 @@ test.describe("без связи", () => {
 
     await context.setOffline(true);
     await context.clearCookies();
+    // Сверка при запуске не дошла до сервера: экран входа может вернуть только сверка по `online`.
+    const startCheckFailed = page.waitForEvent("requestfailed", (request) =>
+      request.url().endsWith("/api/auth/get-session"),
+    );
     await page.reload();
+    await startCheckFailed;
     await expect(profileButton(page)).toBeVisible();
 
     await context.setOffline(false);

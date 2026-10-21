@@ -15,19 +15,27 @@ export function newTelegramUser(firstName = "Анна"): FakeUser {
   return { id: 1_000_000 + lastTelegramId, firstName };
 }
 
-/** Пишет боту `/start` от имени `user` и ждёт код из ответа бота. */
-export async function codeFromBot(api: ApiServer, user: FakeUser): Promise<string> {
+/** Пишет боту `/start` от имени `user` и ждёт ответ с кодом: сообщение целиком и код из него. */
+export async function messageFromBot(
+  api: ApiServer,
+  user: FakeUser,
+): Promise<{ message: string; code: string }> {
   const answeredBefore = api.telegram.sentTo(user.id).length;
   api.telegram.send(user, "/start");
   const deadline = Date.now() + BOT_ANSWER_TIMEOUT_MS;
   while (Date.now() < deadline) {
     for (const message of api.telegram.sentTo(user.id).slice(answeredBefore)) {
       const code = codeInMessage(message);
-      if (code) return code;
+      if (code) return { message, code };
     }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error(`Бот не прислал код за ${BOT_ANSWER_TIMEOUT_MS / 1000} с`);
+}
+
+/** Пишет боту `/start` от имени `user` и ждёт код из ответа бота. */
+export async function codeFromBot(api: ApiServer, user: FakeUser): Promise<string> {
+  return (await messageFromBot(api, user)).code;
 }
 
 let lastClientIp = 0;

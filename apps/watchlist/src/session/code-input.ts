@@ -8,12 +8,19 @@ export const CODE_LENGTH = 8;
 const DIGIT_GROUP = /\d(?:[ -]*\d)*/g;
 
 /**
- * Код из того, что человек ввёл или вставил в поле. Из сообщения бота код копируют вместе с
- * текстом, где есть и другие числа, поэтому сначала ищется группа ровно из `CODE_LENGTH` цифр.
- * Иначе берутся последние цифры: новый код, вставленный в поле с прежним, оказывается в конце.
+ * Код из того, что человек ввёл или вставил в поле; `previous` – код в поле до этого.
+ *
+ * Если в поле стоял полный код – отклонённый или отправленный, – берётся то, что к нему добавили:
+ * новый код, вставленный до или после прежнего, или набранную цифру. Из сообщения бота код
+ * копируют вместе с текстом, где есть и другие числа, поэтому код – группа ровно из
+ * `CODE_LENGTH` цифр, последняя. Если такой нет, человек набирает код: лишние цифры отбрасываются.
  */
-export function codeFromInput(input: string): string {
-  const groups = (input.match(DIGIT_GROUP) ?? []).map((group) => group.replace(/\D/g, ""));
+export function codeFromInput(input: string, previous: string): string {
+  const added =
+    previous.length === CODE_LENGTH && input !== previous && input.includes(previous)
+      ? input.replace(previous, "")
+      : input;
+  const groups = (added.match(DIGIT_GROUP) ?? []).map((group) => group.replace(/\D/g, ""));
   const whole = groups.filter((digits) => digits.length === CODE_LENGTH).at(-1);
-  return whole ?? input.replace(/\D/g, "").slice(-CODE_LENGTH);
+  return whole ?? added.replace(/\D/g, "").slice(0, CODE_LENGTH);
 }

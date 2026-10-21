@@ -12,6 +12,7 @@ export const BOT_USERNAME = "lists_e2e_bot";
 const BOT_TOKEN = "e2e-token";
 
 const SERVER_MAIN = fileURLToPath(new URL("../../apps/server/src/main.ts", import.meta.url));
+// Запуск и остановка укладываются в таймаут фикстуры `server` в `index.ts`.
 const START_TIMEOUT_MS = 30_000;
 // Остановка бота ждёт начатый ответ и подтверждение Telegram, до 20 с; дольше – процесс завис.
 const STOP_TIMEOUT_MS = 30_000;
@@ -59,30 +60,48 @@ export async function startApiServer({
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
-  const collect = (chunk: Buffer) => (output = (output + chunk).slice(-OUTPUT_LIMIT));
-  server.stdout.on("data", collect);
-  server.stderr.on("data", collect);
-  let stopping = false;
-  server.on("exit", (code, signal) => {
-    if (!stopping) console.error(`Сервер e2e упал: код ${code}, сигнал ${signal}\n${output}`);
+  for (const stream of [server.stdout, server.stderr]) {
+    stream.setEncoding("utf8");
+    stream.on("data", (chunk: string) => (output = (output + chunk).slice(-OUTPUT_LIMIT)));
+  }
+  // Пока идут тесты, выход сервера с ошибкой – сбой, и для разбора нужен его вывод. Код 0 – выход
+  // по SIGINT, когда прогон прервали из терминала. Сбой запуска вывод печатает сам.
+  let serving = false;
+  // `close`, а не `exit`: к нему вывод процесса дочитан.
+  const closed = new Promise<void>((resolve) => {
+    server.on("close", (code, signal) => {
+      if (serving && code !== 0) {
+        console.error(`Сервер e2e упал: код ${code}, сигнал ${signal}\n${output}`);
+      }
+      resolve();
+    });
   });
 
   const stop = async () => {
-    stopping = true;
+    serving = false;
+    let stopError: unknown;
     try {
-      await stopProcess(server);
-    } finally {
-      await telegram.close();
-      await database.drop();
+      await stopProcess(server, closed);
+    } catch (error) {
+      stopError = error;
     }
+    await telegram.close();
+    // Соединения убитого процесса Postgres закрывает не сразу, и удаление упадёт: базу уберёт
+    // следующий прогон (`dropAbandonedTestDatabases`).
+    if (stopError) throw stopError;
+    await database.drop();
   };
 
   try {
     await waitUntilHealthy(server, url);
   } catch (error) {
-    await stop();
-    throw new Error(`Сервер не запустился: ${String(error)}\n${output}`);
+    const stopProblem = await stop().then(
+      () => "",
+      (stopError: unknown) => `\nИ не остановился: ${String(stopError)}`,
+    );
+    throw new Error(`Сервер не запустился: ${String(error)}${stopProblem}\n${output}`);
   }
+  serving = true;
   return { url, telegram, stop };
 }
 
@@ -106,19 +125,18 @@ async function waitUntilHealthy(server: ChildProcess, url: string) {
 
 /**
  * SIGTERM, как Docker: сервер дожидается бота и закрывает пул, иначе база не удалится. Зависший
- * процесс, как и Docker, добивает SIGKILL – и сообщает об этом ошибкой.
+ * процесс, как и Docker, добивает SIGKILL – и сообщает об этом ошибкой. `closed` – процесс вышел,
+ * и его вывод дочитан.
  */
-async function stopProcess(server: ChildProcess) {
-  if (server.exitCode !== null || server.signalCode !== null) return;
-  const exited = once(server, "exit");
-  server.kill("SIGTERM");
+async function stopProcess(server: ChildProcess, closed: Promise<void>) {
+  if (server.exitCode === null && server.signalCode === null) server.kill("SIGTERM");
   const timeout = AbortSignal.timeout(STOP_TIMEOUT_MS);
   const stopped = await Promise.race([
-    exited.then(() => true),
+    closed.then(() => true),
     once(timeout, "abort").then(() => false),
   ]);
   if (stopped) return;
   server.kill("SIGKILL");
-  await exited;
+  await closed;
   throw new Error(`Сервер e2e не остановился за ${STOP_TIMEOUT_MS / 1000} с после SIGTERM`);
 }

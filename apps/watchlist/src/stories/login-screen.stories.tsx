@@ -25,7 +25,7 @@ function LoginScreenDemo({ bot, code: initialCode, checking, problem, onUpdate }
       codeLength={CODE_LENGTH}
       checking={checking}
       problem={problem}
-      onCodeChange={(input) => setCode(codeFromInput(input))}
+      onCodeChange={(input) => setCode(codeFromInput(input, code))}
       onSubmit={() => {}}
       onUpdate={onUpdate}
     />

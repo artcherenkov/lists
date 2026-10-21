@@ -31,28 +31,24 @@ function useLoginBot(): LoginBot {
 
   useEffect(() => {
     let stopped = false;
-    let loading = false;
-    // Сеть вернулась, пока шёл прежний запрос: если он не удался, следующий – сразу.
-    let retryAtOnce = false;
+    let loaded = false;
+    // О неудаче решает только последний запрос: прежний мог зависнуть, а сеть уже вернулась.
+    let lastAttempt = 0;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
-      if (loading) {
-        retryAtOnce = true;
-        return;
-      }
-      loading = true;
-      retryAtOnce = false;
+      if (loaded) return;
+      const attempt = ++lastAttempt;
       clearTimeout(retry);
       const username = await loadBotUsername();
-      loading = false;
-      if (stopped) return;
+      if (stopped || loaded) return;
       if (username) {
+        loaded = true;
         setBot({ name: `@${username}`, link: `https://t.me/${username}?start=login` });
-        window.removeEventListener("online", load);
         return;
       }
+      if (attempt !== lastAttempt) return;
       setBot("unavailable");
-      retry = setTimeout(load, retryAtOnce ? 0 : BOT_RETRY_MS);
+      retry = setTimeout(load, BOT_RETRY_MS);
     };
     void load();
     window.addEventListener("online", load);
@@ -90,7 +86,7 @@ export function ConnectedLoginScreen({ onUpdate }: { onUpdate: (() => void) | un
       checking={checking}
       problem={problem}
       onCodeChange={(input) => {
-        const digits = codeFromInput(input);
+        const digits = codeFromInput(input, code);
         // Тот же код после отказа – новая попытка: человек вставил его снова, когда вернулась связь.
         if (digits === code && !problem) return;
         setCode(digits);

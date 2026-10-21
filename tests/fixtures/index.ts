@@ -18,7 +18,7 @@ export { openJournal } from "./journal.ts";
 export { openProfile, VERSION_FORMAT } from "./profile.ts";
 export { waitForServiceWorker } from "./service-worker.ts";
 export { centerOf, fingerTap, swipeDown } from "./swipe.ts";
-export { codeFromBot } from "./telegram.ts";
+export { codeFromBot, messageFromBot } from "./telegram.ts";
 export { newVersionButton, openFirstBuildUnderWorker } from "./update.ts";
 export {
   closeWithoutEvents,
@@ -51,7 +51,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await use(server);
       await server.stop();
     },
-    { scope: "worker" },
+    // Запуск и остановка сервера – до 30 с каждый (`api-server.ts`), а общий таймаут – тоже 30 с:
+    // с ним Playwright прервал бы фикстуру раньше, чем она доложит, что сервер завис.
+    { scope: "worker", timeout: 60_000 },
   ],
   baseURL: async ({ server }, use) => {
     await use(server.url);
