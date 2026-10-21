@@ -45,6 +45,12 @@ export default defineConfig({
       },
     }),
   ],
-  // Свой порт: 5173 и 5174 занимает abc/cloud, и оба проекта можно держать запущенными вместе
-  server: { port: 5175, strictPort: true },
+  server: {
+    // Свой порт: 5173 и 5174 занимает abc/cloud, и оба проекта можно держать запущенными вместе
+    port: 5175,
+    strictPort: true,
+    // В разработке /api ведёт на сервер из apps/server, как Caddy на v2: браузер видит один адрес,
+    // и cookie входа – того же сайта. Порт – PORT из apps/server/dev.env.
+    proxy: { "/api/": "http://127.0.0.1:3400" },
+  },
 });
