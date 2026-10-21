@@ -50,7 +50,7 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
     await client.query(`CREATE TABLE IF NOT EXISTS public.schema_migrations (
       name text PRIMARY KEY,
       sha256 text NOT NULL,
-      applied_at timestamptz NOT NULL DEFAULT now()
+      applied_at timestamptz NOT NULL DEFAULT pg_catalog.now()
     )`);
     const rows = await client.query<{ name: string; sha256: string }>(
       "SELECT name, sha256 FROM public.schema_migrations",
@@ -76,24 +76,23 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
       // файлы шли бы без них, а упавший файл оставил бы базу наполовину. В `EXECUTE` их в любом
       // написании не принимает сам Postgres. Параметров `DO` не принимает, поэтому текст файла
       // приходит в него через настройку `lists.migration`.
-      // Сбой записи после файла тоже называет файл: её роняет оставленное файлом состояние сеанса.
       try {
         await client.query("SELECT pg_catalog.set_config('lists.migration', $1, true)", [file.sql]);
         await client.query(
           "DO $$ BEGIN EXECUTE pg_catalog.current_setting('lists.migration'); END $$",
         );
-        // Сразу после файла: его `SET` не действует ни на служебные запросы запуска, ни на
-        // следующие файлы.
-        await client.query("RESET ALL");
-        await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
-          file.name,
-          sha256Of(file.sql),
-        ]);
       } catch (error) {
         // pg бросает только Error.
         const { message } = error as Error;
         throw new Error(`Миграция ${file.name} не применилась: ${message}`, { cause: error });
       }
+      // Сразу после файла: его `SET` не действует ни на служебные запросы запуска, ни на следующие
+      // файлы.
+      await client.query("RESET ALL");
+      await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
+        file.name,
+        sha256Of(file.sql),
+      ]);
       applied.push(file.name);
     }
     await client.query("COMMIT");

@@ -128,6 +128,7 @@ describe("миграции", () => {
     await expect(migrate(pool, [first, nul])).rejects.toThrow(
       "Миграция 0002_nul.sql не применилась: invalid byte sequence",
     );
+    expect(await tables()).toEqual([]);
   });
 
   test("отказывает в файле без номера в имени, ничего не применяя", async () => {
