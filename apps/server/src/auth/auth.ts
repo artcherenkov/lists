@@ -15,7 +15,7 @@ export type AuthConfig = Pick<ServerConfig, "publicUrl" | "authSecret">;
 
 /**
  * Настройки better-auth (решения 5 и 13 плана, решения 3–5 вехи 6). Отдельно от `createAuth`,
- * потому что по ним же `scripts/auth-sql.ts` пишет SQL таблиц входа для миграции.
+ * потому что по ним же `scripts/auth-sql.ts` пишет миграцию таблиц входа.
  */
 export function authOptions({ pool, config }: { pool: pg.Pool; config: AuthConfig }) {
   return {
