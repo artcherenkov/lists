@@ -32,9 +32,13 @@ describe("обрыв соединения не роняет процесс, сл
   test("простаивающего в пуле", async () => {
     const idle = await pool.connect();
     const killer = await pool.connect();
+    let pid: number | undefined;
     try {
-      const pid = await backendPid(idle);
+      pid = await backendPid(idle);
+    } finally {
       idle.release();
+    }
+    try {
       await terminateAndWait(killer, pid);
     } finally {
       killer.release();

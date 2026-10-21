@@ -9,9 +9,11 @@ import path from "node:path";
  * Миграция только добавляет: схему, таблицу, колонку без `NOT NULL` или с умолчанием, неуникальный
  * индекс. К существующей таблице не добавляет того, что прежний релиз может нарушить, – уникальный
  * индекс, ссылку, `CHECK`, триггер – и не пишет данные. Тогда прежний релиз работает на новой
- * базе, и откат выкладки базу не трогает (решение 9 вехи 6). Применённый файл не меняют и не
- * удаляют, в том числе через `git revert`, даже комментарий: сверка идёт по сумме всего файла.
- * Ошибку исправляет новый файл.
+ * базе, и откат выкладки базу не трогает (решение 9 вехи 6). Добавки better-auth по этому
+ * правилу проверяет `scripts/unsafe-additions.ts`: меняя правило, поправь и его.
+ *
+ * Применённый файл не меняют и не удаляют, в том числе через `git revert`, даже комментарий:
+ * сверка идёт по сумме всего файла. Ошибку исправляет новый файл.
  */
 export interface Migration {
   name: string;
@@ -60,6 +62,12 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
     throw new Error(
       `Имя миграции не по образцу 0001_что.sql: ${misnamed.map((file) => file.name).join(", ")}`,
     );
+  }
+  // Две ветки взяли один номер: после слияния обеих порядок разошёлся бы с уже выложенным.
+  const numbers = migrations.map((file) => file.name.slice(0, 4));
+  const repeated = numbers.filter((number, index) => numbers.indexOf(number) !== index);
+  if (repeated.length > 0) {
+    throw new Error(`Номер миграции повторяется: ${[...new Set(repeated)].join(", ")}`);
   }
   const files = [...migrations].sort((a, b) => (a.name < b.name ? -1 : 1));
   const client = await pool.connect();

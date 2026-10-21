@@ -60,13 +60,13 @@ describe("миграции", () => {
   });
 
   test("отказывает в новом файле, который по имени встаёт перед применённым", async () => {
-    await migrate(pool, [first, second]);
-    const late = { name: "0001_late.sql", sql: "CREATE TABLE late (id int)" };
+    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
+    await migrate(pool, [first, third]);
 
-    await expect(migrate(pool, [first, late, second])).rejects.toThrow(
-      "Миграции базы расходятся с релизом: 2-я в базе – 0002_second.sql, в релизе – 0001_late.sql",
+    await expect(migrate(pool, [first, second, third])).rejects.toThrow(
+      "Миграции базы расходятся с релизом: 2-я в базе – 0003_third.sql, в релизе – 0002_second.sql",
     );
-    expect(await tables()).not.toContain("late");
+    expect(await tables()).not.toContain("second");
   });
 
   test("отказывает, если в базе осталась миграция ветки, которой нет в релизе", async () => {
@@ -85,6 +85,15 @@ describe("миграции", () => {
 
     await expect(migrate(pool, [first, unnumbered])).rejects.toThrow(
       "Имя миграции не по образцу 0001_что.sql: fix_auth.sql",
+    );
+    expect(await tables()).toEqual([]);
+  });
+
+  test("отказывает, если две миграции взяли один номер", async () => {
+    const twin = { name: "0002_twin.sql", sql: "CREATE TABLE twin (id int)" };
+
+    await expect(migrate(pool, [first, second, twin])).rejects.toThrow(
+      "Номер миграции повторяется: 0002",
     );
     expect(await tables()).toEqual([]);
   });

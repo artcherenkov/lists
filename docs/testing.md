@@ -7,7 +7,7 @@
 ## Где что лежит
 
 - Unit: `apps/*/src/**/__tests__/*.test.ts(x)`, `packages/*/src/**/__tests__/*.test.ts(x)` и `tests/fixtures/**/__tests__/*.test.ts` – последние проверяют сами помощники тестов. Вычисления конфига сборки проверяет `apps/*/build/**/__tests__/*.test.ts`: им нужен Node, поэтому они не в `src`, откуда код уходит в браузер. Инструменты разработки – `apps/*/scripts/**/__tests__/*.test.ts`. Скрипт выкладки `deploy/*.sh` unit не проверяет: его проверяют прогон на сервере `lists` и `shellcheck`, см. [deploy/README.md](../deploy/README.md#выкладка). Конфиг один – `vitest.config.ts` в корне.
-- DB: `**/__tests__/*.db.test.ts` где угодно, проект `db` в `vitest.config.ts`, команда `pnpm test:db`; unit-проект их не берёт, поэтому хук `pre-push` базы не требует. Перед запуском `apps/server/src/__tests__/prepare-postgres.ts` поднимает Postgres стека разработки (`compose.yaml` в корне) и удаляет базы, брошенные прошлыми запусками; с `TEST_POSTGRES_URL` – адрес служебной базы `postgres` – тесты идут на заданный Postgres.
+- DB: `*.db.test.ts` в тех же местах, проект `db` в `vitest.config.ts`, команда `pnpm test:db`; unit-проект их не берёт, поэтому хук `pre-push` базы не требует. Перед запуском `apps/server/src/__tests__/prepare-postgres.ts` поднимает Postgres стека разработки (`compose.yaml` в корне) и удаляет базы, брошенные прошлыми запусками; с `TEST_POSTGRES_URL` – адрес служебной базы `postgres` – тесты идут на заданный Postgres.
 - E2E: `tests/e2e/<область>/<имя>.spec.ts`. Конфиг один – `playwright.config.ts`. Устройство – Chromium с размерами и касаниями iPhone (393×852, `isMobile`, `hasTouch`, `deviceScaleFactor: 3`, язык `ru-RU`).
 - Кирпичики – `tests/fixtures`. Новый кирпичик добавляем туда же, отдельных наборов и конфигов не заводим: по набору тестов должно быть видно, что в нём настоящее, а что подменено.
 
@@ -79,8 +79,8 @@
 | `page`, `openJournal`, `clock`, `permissions` | `tests/e2e/watchlist/journal-screen.spec.ts` – экран журнала: открытие из профиля, прокрутка, копирование, отказ буфера, «Очистить», свайпы |
 | `page`, `openJournal`, `ownServer`, `serviceWorkers: "allow"` | `tests/e2e/app/journal.spec.ts` – журнал пишет запуск, возвраты, перенос записей пробы, проверку и включение новой версии и переживает обновление |
 | unit, строка журнала | `tests/fixtures/__tests__/journal-line.test.ts` – какие строки подходят под `journalLine` |
-| db, пустая база на тест | `apps/server/src/database/__tests__/migrate.db.test.ts` – миграции: порядок, откат упавшего запуска, изменённый файл, файл перед применённым, миграция ветки в базе, имя без номера, одновременные запуски |
+| db, пустая база на тест | `apps/server/src/database/__tests__/migrate.db.test.ts` – миграции: порядок, откат упавшего запуска, изменённый файл, файл перед применённым, миграция ветки в базе, имя без номера, повтор номера, одновременные запуски |
 | db, пустая база на тест | `apps/server/src/database/__tests__/pool.db.test.ts` – обрыв простаивающего и взятого соединения не роняет процесс |
 | db, `app.request()` | `apps/server/src/http/__tests__/app.db.test.ts` – проверка здоровья с базой и без, сессия, закрытые маршруты better-auth, проверка Origin, пределы по IP из `X-Real-IP` |
 | db, настройки better-auth | `apps/server/src/auth/__tests__/auth.db.test.ts` – сверка схемы входа, cookie и срок входа, транзакции, один аккаунт Telegram – один человек |
-| unit, чистая функция | `apps/server/src/__tests__/config.test.ts` – настройки сервера из окружения; `apps/server/scripts/__tests__/unsafe-additions.test.ts` – опасные добавки better-auth к существующим таблицам |
+| unit, чистая функция | `apps/server/src/__tests__/config.test.ts` – настройки сервера из окружения; `apps/server/scripts/__tests__/unsafe-additions.test.ts` – опасные добавки better-auth к существующим таблицам, какие умолчания better-auth пишет в SQL |

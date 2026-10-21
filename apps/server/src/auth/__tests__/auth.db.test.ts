@@ -35,7 +35,7 @@ describe("вход на базе с миграциями", () => {
     expect(context.sessionConfig.expiresIn).toBe(365 * 24 * 60 * 60);
   });
 
-  test("запись входа идёт транзакцией: при ошибке не остаётся ничего", async () => {
+  test("транзакция better-auth при ошибке откатывается целиком", async () => {
     const { adapter, internalAdapter } = await auth.$context;
     const email = "tg-44@telegram.invalid";
 

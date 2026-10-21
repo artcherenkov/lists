@@ -10,12 +10,13 @@ export const AUTH_BASE_PATH = "/api/auth";
 
 const YEAR_SECONDS = 365 * 24 * 60 * 60;
 
+/** Настройки сервера, которые нужны входу. */
+export type AuthConfig = Pick<ServerConfig, "publicUrl" | "authSecret">;
+
 /**
  * Настройки better-auth (решения 5 и 13 плана, решения 3–5 вехи 6). Отдельно от `createAuth`,
  * потому что по ним же `scripts/auth-sql.ts` пишет SQL таблиц входа для миграции.
  */
-/** Настройки сервера, которые нужны входу. */
-export type AuthConfig = Pick<ServerConfig, "publicUrl" | "authSecret">;
 
 export function authOptions({ pool, config }: { pool: pg.Pool; config: AuthConfig }) {
   return {

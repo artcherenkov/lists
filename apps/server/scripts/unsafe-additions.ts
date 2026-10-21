@@ -4,9 +4,10 @@ type MigrationPlan = Awaited<ReturnType<typeof getMigrations>>;
 
 /**
  * Добавки better-auth к уже существующим таблицам, которые нарушают правило «миграции только
- * добавляют» (`src/database/migrate.ts`): колонка `NOT NULL` без умолчания, уникальность, ссылка.
- * На базе с людьми первая не применится, остальные прежний релиз может нарушить. better-auth сам
- * отказывает только в первой и только для таблицы с данными, а `auth:sql` сравнивает на пустой.
+ * добавляют» – само правило записано в `src/database/migrate.ts`: колонка `NOT NULL` без
+ * умолчания в SQL, уникальность, ссылка. На базе с людьми первая не применится, остальные прежний
+ * релиз может нарушить. better-auth сам отказывает только в первой и только для таблицы
+ * с данными, а `auth:sql` сравнивает на пустой.
  */
 export function findUnsafeAdditions(
   plan: Pick<MigrationPlan, "toBeCreated" | "toBeAdded" | "toBeAddedIndexes">,
@@ -30,9 +31,12 @@ export function findUnsafeAdditions(
   return problems;
 }
 
-// Когда better-auth пишет умолчание в SQL: постоянное значение, а у даты – функция (now()).
+// Когда better-auth 1.7.11 пишет умолчание в SQL (`isTimestampDefault` и `hasStaticColumnDefault`
+// в `db/get-migration.mjs`): у даты – функция, она становится `CURRENT_TIMESTAMP`; у строки,
+// числа и флага – постоянное значение. Остальные умолчания он подставляет только при записи.
 function hasSqlDefault(field: MigrationPlan["toBeAdded"][number]["fields"][string]) {
-  if (field.defaultValue === undefined || field.defaultValue === null) return false;
-  if (typeof field.defaultValue === "function") return field.type === "date";
-  return true;
+  const value = field.defaultValue;
+  if (value === undefined || value === null) return false;
+  if (typeof value === "function") return field.type === "date";
+  return field.type === "string" || field.type === "number" || field.type === "boolean";
 }

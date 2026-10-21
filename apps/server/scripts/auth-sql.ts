@@ -19,21 +19,27 @@ await preparePostgres();
 const database = await createTestDatabase();
 try {
   const options = authOptions({ pool: database.pool, config: TEST_AUTH_CONFIG });
+  // Свой отказ better-auth (`unsafeChanges`) срабатывает только на таблице с данными, а база пуста.
   const plan = await getMigrations(options, { throwOnUnsafe: false });
-  const problems = [...plan.unsafeChanges, ...plan.schemaProblems, ...findUnsafeAdditions(plan)];
-  for (const problem of problems) {
-    console.error(`Не сделать добавлением, нужна ручная миграция: ${problem}`);
-  }
-  if (problems.length > 0) process.exitCode = 1;
-
+  const problems = [...plan.schemaProblems, ...findUnsafeAdditions(plan)];
   const nothingToAdd =
     plan.toBeCreated.length === 0 &&
     plan.toBeAdded.length === 0 &&
     plan.toBeAddedIndexes.length === 0;
-  if (!nothingToAdd) {
-    console.log(await plan.compileMigrations());
-  } else if (problems.length === 0) {
+
+  if (problems.length > 0) {
+    // В stdout ничего: его перенаправляют в файл миграции.
+    process.exitCode = 1;
+    for (const problem of problems) {
+      console.error(`Не сделать добавлением, нужна ручная миграция: ${problem}`);
+    }
+    if (!nothingToAdd) {
+      console.error(`\nSQL better-auth – только для справки:\n${await plan.compileMigrations()}`);
+    }
+  } else if (nothingToAdd) {
     console.log("-- Таблицы входа совпадают, миграция не нужна");
+  } else {
+    console.log(await plan.compileMigrations());
   }
 } finally {
   await database.drop();

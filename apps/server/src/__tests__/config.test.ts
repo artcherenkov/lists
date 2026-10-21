@@ -27,7 +27,10 @@ describe("настройки сервера из окружения", () => {
     );
   });
 
-  test("порт не числом – отказ", () => {
-    expect(() => readConfig({ ...complete, PORT: "http" })).toThrow("PORT");
+  test("порт не номером порта – отказ", () => {
+    expect(() => readConfig({ ...complete, PORT: "http" })).toThrow("PORT – не номер порта: http");
+    expect(() => readConfig({ ...complete, PORT: "70000" })).toThrow(
+      "PORT – не номер порта: 70000",
+    );
   });
 });
