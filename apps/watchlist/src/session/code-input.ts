@@ -4,23 +4,29 @@
  */
 export const CODE_LENGTH = 8;
 
-// Группа цифр, внутри которой могут быть пробелы и дефисы, но не перевод строки.
-const DIGIT_GROUP = /\d(?:[ -]*\d)*/g;
+// Число, цифры которого могут разделять одиночные пробелы или дефисы: «4815 1623».
+const NUMBER = /\d+(?:[ -]\d+)*/g;
 
 /**
- * Код из того, что человек ввёл или вставил в поле; `previous` – код в поле до этого.
- *
- * Если в поле стоял полный код – отклонённый или отправленный, – берётся то, что к нему добавили:
- * новый код, вставленный до или после прежнего, или набранную цифру. Из сообщения бота код
- * копируют вместе с текстом, где есть и другие числа, поэтому код – группа ровно из
- * `CODE_LENGTH` цифр, последняя. Если такой нет, человек набирает код: лишние цифры отбрасываются.
+ * Код во вставленном тексте – единственное в нём число ровно из `CODE_LENGTH` цифр, иначе
+ * `undefined`. Так код находится и в сообщении бота, скопированном целиком: другие числа в нём
+ * короче.
  */
-export function codeFromInput(input: string, previous: string): string {
-  const added =
-    previous.length === CODE_LENGTH && input !== previous && input.includes(previous)
-      ? input.replace(previous, "")
-      : input;
-  const groups = (added.match(DIGIT_GROUP) ?? []).map((group) => group.replace(/\D/g, ""));
-  const whole = groups.filter((digits) => digits.length === CODE_LENGTH).at(-1);
-  return whole ?? added.replace(/\D/g, "").slice(0, CODE_LENGTH);
+export function codeInText(text: string): string | undefined {
+  const codes = (text.match(NUMBER) ?? [])
+    .map((number) => number.replace(/\D/g, ""))
+    .filter((digits) => digits.length === CODE_LENGTH);
+  return codes.length === 1 ? codes[0] : undefined;
+}
+
+/**
+ * Код из поля после набора, `undefined` – набор не принят и в поле остаётся прежний код. Поле
+ * держит не больше `CODE_LENGTH` цифр: лишняя цифра не принимается, как в поле с `maxLength`.
+ * Длинный текст, попавший в поле без события вставки, – например, его подставила клавиатура, –
+ * разбирается как вставленный.
+ */
+export function codeFromField(value: string): string | undefined {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length <= CODE_LENGTH) return digits;
+  return codeInText(value);
 }

@@ -12,7 +12,7 @@ import { newClientIp, newTelegramUser, signInWithoutScreen } from "./telegram.ts
 
 export { expect };
 export { BOT_USERNAME } from "./api-server.ts";
-export { breakClipboard, mendClipboard, readClipboard } from "./clipboard.ts";
+export { breakClipboard, mendClipboard, pasteInto, readClipboard } from "./clipboard.ts";
 export { escapeRegExp, journalLine, TIME_FORMAT } from "./journal-line.ts";
 export { openJournal } from "./journal.ts";
 export { openProfile, VERSION_FORMAT } from "./profile.ts";
@@ -51,9 +51,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await use(server);
       await server.stop();
     },
-    // Запуск и остановка сервера – до 30 с каждый (`api-server.ts`), а общий таймаут – тоже 30 с:
-    // с ним Playwright прервал бы фикстуру раньше, чем она доложит, что сервер завис.
-    { scope: "worker", timeout: 60_000 },
+    // Таймаут у запуска и остановки фикстуры один на двоих. Запуск ждёт сервер до 30 с, остановка –
+    // до 30 с (`api-server.ts`), а сбой запуска останавливает сервер внутри запуска. С общим
+    // таймаутом в 30 с Playwright прервал бы фикстуру раньше, чем она доложит, что сервер завис.
+    { scope: "worker", timeout: 90_000 },
   ],
   baseURL: async ({ server }, use) => {
     await use(server.url);

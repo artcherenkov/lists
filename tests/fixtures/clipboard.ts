@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * Буфер обмена недоступен, как на странице по http или при отказе пользователя. Подменяется
@@ -29,4 +29,13 @@ export async function mendClipboard(page: Page): Promise<void> {
 /** Текст, который лежит в буфере обмена; нужны разрешения `clipboard-read` и `clipboard-write`. */
 export function readClipboard(page: Page): Promise<string> {
   return page.evaluate(() => navigator.clipboard.readText());
+}
+
+/**
+ * Вставляет `text` в поле, как человек: через буфер обмена и сочетание клавиш, поэтому поле
+ * получает событие вставки. Нужны разрешения `clipboard-read` и `clipboard-write`.
+ */
+export async function pasteInto(field: Locator, text: string): Promise<void> {
+  await field.page().evaluate((value) => navigator.clipboard.writeText(value), text);
+  await field.press("ControlOrMeta+V");
 }

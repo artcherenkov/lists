@@ -23,6 +23,7 @@ export function LoginScreen({
   checking,
   problem,
   onCodeChange,
+  onCodePaste,
   onSubmit,
   onUpdate,
 }: {
@@ -34,8 +35,10 @@ export function LoginScreen({
   checking: boolean;
   /** Почему не впустили – готовый текст. */
   problem?: string;
-  /** Строка как её ввели или вставили: родитель сам оставит цифры. */
-  onCodeChange: (input: string) => void;
+  /** Значение поля после набора: родитель сам оставит цифры. */
+  onCodeChange: (value: string) => void;
+  /** Вставленный текст. `true` – родитель взял из него код, и поле текст не вставляет. */
+  onCodePaste: (text: string) => boolean;
   onSubmit: () => void;
   /** Есть, когда готова новая версия. */
   onUpdate?: () => void;
@@ -95,6 +98,10 @@ export function LoginScreen({
               placeholder={"•".repeat(codeLength)}
               value={code}
               onChange={(event) => onCodeChange(event.target.value)}
+              onPaste={(event) => {
+                if (checking) return;
+                if (onCodePaste(event.clipboardData.getData("text"))) event.preventDefault();
+              }}
               readOnly={checking}
               aria-invalid={problem ? true : undefined}
               className="h-14 rounded-xl text-center font-mono text-2xl tracking-[0.3em] tabular-nums md:text-2xl"

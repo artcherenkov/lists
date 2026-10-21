@@ -8,12 +8,14 @@ import {
   messageFromBot,
   openJournal,
   openProfile,
+  pasteInto,
   test,
   waitForServiceWorker,
 } from "../../fixtures/index.ts";
 
-// Здесь вход – предмет теста: тест начинает без входа и входит сам, через экран.
-test.use({ signedIn: false });
+// Здесь вход – предмет теста: тест начинает без входа и входит сам, через экран. Код вставляют
+// через буфер обмена.
+test.use({ signedIn: false, permissions: ["clipboard-read", "clipboard-write"] });
 
 const codeField = (page: Page) => page.getByLabel("Код из Telegram", { exact: true });
 const botLink = (page: Page) => page.getByRole("link", { name: "Открыть бота в Telegram" });
@@ -40,7 +42,7 @@ test("код из бота впускает, вход переживает пе�
 
   await test.step("сообщение бота, вставленное в поле целиком, сразу впускает", async () => {
     const { message } = await messageFromBot(server.api, telegramUser);
-    await codeField(page).fill(message);
+    await pasteInto(codeField(page), message);
 
     await expect(profileButton(page)).toBeVisible();
   });
@@ -74,8 +76,7 @@ test("неверный код – объяснение на экране, нов
     "Код неверный или устарел. Проверьте цифры или получите новый код у бота.",
   );
 
-  await codeField(page).press("End");
-  await page.keyboard.insertText(code);
+  await pasteInto(codeField(page), code);
   await expect(profileButton(page)).toBeVisible();
 });
 
@@ -175,7 +176,7 @@ test.describe("без связи", () => {
     });
 
     await test.step("тот же код, вставленный снова, впускает", async () => {
-      await codeField(page).fill(`${code.slice(0, 4)} ${code.slice(4)}`);
+      await pasteInto(codeField(page), `${code.slice(0, 4)} ${code.slice(4)}`);
       await expect(profileButton(page)).toBeVisible();
     });
   });

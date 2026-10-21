@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { type LoginBot, LoginScreen } from "./screens/login-screen.tsx";
-import { CODE_LENGTH, codeFromInput } from "./session/code-input.ts";
+import { CODE_LENGTH, codeFromField, codeInText } from "./session/code-input.ts";
 import { loadBotUsername, signIn, type SignInResult } from "./session/session.ts";
 // Пока сервер не назвал бота, имя запрашивается снова: сервер мог перезапускаться, а событие
 // `online` приходит, только когда пропадала сама сеть устройства.
@@ -32,13 +32,9 @@ function useLoginBot(): LoginBot {
   useEffect(() => {
     let stopped = false;
     let loaded = false;
-    // О неудаче решает только последний запрос: прежний мог зависнуть, а сеть уже вернулась.
-    let lastAttempt = 0;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
       if (loaded) return;
-      const attempt = ++lastAttempt;
-      clearTimeout(retry);
       const username = await loadBotUsername();
       if (stopped || loaded) return;
       if (username) {
@@ -46,8 +42,9 @@ function useLoginBot(): LoginBot {
         setBot({ name: `@${username}`, link: `https://t.me/${username}?start=login` });
         return;
       }
-      if (attempt !== lastAttempt) return;
       setBot("unavailable");
+      // Повтор по таймеру – один, даже если запросы по событию `online` шли параллельно.
+      clearTimeout(retry);
       retry = setTimeout(load, BOT_RETRY_MS);
     };
     void load();
@@ -85,13 +82,21 @@ export function ConnectedLoginScreen({ onUpdate }: { onUpdate: (() => void) | un
       codeLength={CODE_LENGTH}
       checking={checking}
       problem={problem}
-      onCodeChange={(input) => {
-        const digits = codeFromInput(input, code);
-        // Тот же код после отказа – новая попытка: человек вставил его снова, когда вернулась связь.
-        if (digits === code && !problem) return;
+      onCodeChange={(value) => {
+        const digits = codeFromField(value);
+        if (digits === undefined || digits === code) return;
         setCode(digits);
         setProblem(undefined);
         if (digits.length === CODE_LENGTH) void submit(digits);
+      }}
+      onCodePaste={(text) => {
+        const pasted = codeInText(text);
+        if (pasted === undefined) return false;
+        // Вставка заменяет поле целиком и всегда отправляет код: и тот же, что был, – например,
+        // когда вернулась связь.
+        setCode(pasted);
+        void submit(pasted);
+        return true;
       }}
       onSubmit={() => void submit(code)}
       onUpdate={onUpdate}

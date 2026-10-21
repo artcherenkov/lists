@@ -12,8 +12,10 @@ export const BOT_USERNAME = "lists_e2e_bot";
 const BOT_TOKEN = "e2e-token";
 
 const SERVER_MAIN = fileURLToPath(new URL("../../apps/server/src/main.ts", import.meta.url));
-// Запуск и остановка укладываются в таймаут фикстуры `server` в `index.ts`.
+// Запуск и остановка вместе укладываются в таймаут фикстуры `server` в `index.ts`.
 const START_TIMEOUT_MS = 30_000;
+// Проверка здоровья отвечает за миллисекунды; без ответа дольше – новая попытка.
+const HEALTH_TIMEOUT_MS = 5_000;
 // Остановка бота ждёт начатый ответ и подтверждение Telegram, до 20 с; дольше – процесс завис.
 const STOP_TIMEOUT_MS = 30_000;
 // Вывод сервера нужен, только если он упал; хвоста хватает для стека ошибки.
@@ -77,19 +79,15 @@ export async function startApiServer({
     });
   });
 
+  // Каждый шаг остановки идёт, даже если прежний упал: ошибки не заслоняют друг друга.
   const stop = async () => {
     serving = false;
-    let stopError: unknown;
-    try {
-      await stopProcess(server, closed);
-    } catch (error) {
-      stopError = error;
-    }
-    await telegram.close();
-    // Соединения убитого процесса Postgres закрывает не сразу, и удаление упадёт: базу уберёт
-    // следующий прогон (`dropAbandonedTestDatabases`).
-    if (stopError) throw stopError;
-    await database.drop();
+    const errors: unknown[] = [];
+    await stopProcess(server, closed).catch((error: unknown) => errors.push(error));
+    await telegram.close().catch((error: unknown) => errors.push(error));
+    await database.drop().catch((error: unknown) => errors.push(error));
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Сервер e2e остановился с ошибками");
   };
 
   try {
@@ -113,10 +111,12 @@ async function waitUntilHealthy(server: ChildProcess, url: string) {
       throw new Error(`процесс вышел: код ${server.exitCode}, сигнал ${server.signalCode}`);
     }
     try {
-      const response = await fetch(`${url}/api/health`);
+      const response = await fetch(`${url}/api/health`, {
+        signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+      });
       if (response.ok) return;
     } catch {
-      // Порт ещё не открыт.
+      // Порт ещё не открыт или сервер не ответил.
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
