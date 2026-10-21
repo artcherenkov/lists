@@ -145,8 +145,7 @@ export async function startFakeBotApi({
 
 // Теги, которыми пишет бот; Telegram знает и другие, подделке они пока не нужны.
 const TAG = /<\/?(?:b|i|u|s|code|pre)>/g;
-const ENTITY = /&(?:lt|gt|amp|quot|#\d+|#x[\da-f]+);/gi;
-const NAMED_ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"' };
+const ENTITY = /&(?:lt|gt|amp|quot|#\d+|#x[\da-fA-F]+);/g;
 
 /**
  * Текст с `parse_mode: "HTML"`, как его покажет Telegram: без тегов и с раскрытыми сущностями.
@@ -155,10 +154,22 @@ const NAMED_ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", quo
 function renderHtml(html: string) {
   const text = html.replaceAll(TAG, "");
   if (/[<>]/.test(text) || text.replaceAll(ENTITY, "").includes("&")) return null;
-  return text.replaceAll(ENTITY, (entity) => {
-    const name = entity.slice(1, -1).toLowerCase();
-    if (!name.startsWith("#")) return NAMED_ENTITIES[name] ?? entity;
-    const code = name.startsWith("#x") ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1));
-    return String.fromCodePoint(code);
-  });
+  return text.replaceAll(ENTITY, (entity) => decodeEntity(entity.slice(1, -1)));
+}
+
+function decodeEntity(name: string) {
+  switch (name) {
+    case "lt":
+      return "<";
+    case "gt":
+      return ">";
+    case "amp":
+      return "&";
+    case "quot":
+      return '"';
+    default:
+      return String.fromCodePoint(
+        name.startsWith("#x") ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1)),
+      );
+  }
 }

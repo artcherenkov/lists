@@ -20,7 +20,7 @@ test("о входе бот пишет самому человеку: время 
     at: new Date("2026-10-21T11:04:00Z"),
   });
 
-  expect(sendMessage).toHaveBeenCalledWith(
+  expect(sendMessage).toHaveBeenCalledExactlyOnceWith(
     "1001",
     "Вход в Lists: 21 октября в 14:04 по Москве, Chrome, Mac.\n" +
       "Если это были не вы, кто-то узнал ваш код: не сообщайте коды никому.",
@@ -32,7 +32,7 @@ test("о подборе кодов бот пишет владельцу", async 
 
   await telegramNotifications({ api, ownerId: "1" }).manyWrongCodes({ failures: 101 });
 
-  expect(sendMessage).toHaveBeenCalledWith(
+  expect(sendMessage).toHaveBeenCalledExactlyOnceWith(
     "1",
     "Неверных кодов в Lists за последний час: 101. Похоже, коды подбирают.",
   );
