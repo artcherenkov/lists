@@ -38,6 +38,7 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
   checkMigrationNames(migrations.map((file) => file.name));
   const files = [...migrations].sort((a, b) => (a.name < b.name ? -1 : 1));
   const client = await pool.connect();
+  let committed = false;
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock($1)", [MIGRATION_LOCK]);
@@ -72,14 +73,17 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
         sha256Of(file.sql),
       ]);
       applied.push(file.name);
+      // `SET` из файла не должен действовать на следующие файлы и уйти с соединением в пул:
+      // иначе результат файла зависел бы от того, с какими файлами он применён одним запуском.
+      await client.query("RESET ALL");
     }
     await client.query("COMMIT");
+    committed = true;
     return { applied, unknown: appliedBefore.slice(common).map((row) => row.name) };
   } finally {
-    // Соединение закрывается и после COMMIT: `SET` из миграции не уйдёт с ним в запросы сервера.
-    // Без COMMIT Postgres при закрытии сам откатывает транзакцию и снимает блокировку; отдельный
-    // ROLLBACK на оборванном соединении упал бы и скрыл исходную ошибку.
-    client.release(true);
+    // Без COMMIT пул закрывает соединение, и Postgres сам откатывает транзакцию и снимает
+    // блокировку; отдельный ROLLBACK на оборванном соединении упал бы и скрыл исходную ошибку.
+    client.release(!committed);
   }
 }
 

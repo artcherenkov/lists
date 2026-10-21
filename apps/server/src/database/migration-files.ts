@@ -2,8 +2,8 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
- * Файл миграции релиза. Имя – номер из четырёх цифр и что делает: `0001_auth.sql`; к базе их
- * по порядку номеров применяет `migrate.ts`.
+ * Файл миграции релиза. Имя – номер из четырёх цифр и что делает: `0001_auth.sql`. К базе их
+ * по порядку номеров применяет `migrate` в `migrate.ts`, там же – что миграции можно делать.
  */
 export interface Migration {
   name: string;

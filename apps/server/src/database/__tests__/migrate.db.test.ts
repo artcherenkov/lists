@@ -104,13 +104,17 @@ describe("миграции", () => {
     expect(await migrate(pool, [first])).toEqual({ applied: [], unknown: ["0002_second.sql"] });
   });
 
-  test("настройка сеанса из миграции не уходит в другие запросы пула", async () => {
+  test("SET из файла не действует на следующие файлы и другие запросы пула", async () => {
+    const searchPath = async () =>
+      (await pool.query<{ search_path: string }>("SHOW search_path")).rows[0]?.search_path;
+    const before = await searchPath();
     const setsPath = { name: "0001_sets_path.sql", sql: "CREATE SCHEMA s; SET search_path = s" };
+    const next = { name: "0002_next.sql", sql: "CREATE TABLE next (id int)" };
 
-    await migrate(pool, [setsPath]);
+    await migrate(pool, [setsPath, next]);
 
-    const result = await pool.query<{ search_path: string }>("SHOW search_path");
-    expect(result.rows[0]?.search_path).toBe('"$user", public');
+    expect(await tables()).toContain("next");
+    expect(await searchPath()).toBe(before);
   });
 
   test("два одновременных запуска применяют файл один раз", async () => {

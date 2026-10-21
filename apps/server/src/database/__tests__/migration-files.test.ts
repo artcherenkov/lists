@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { checkNewMigrationName } from "../migration-files.ts";
 
-// Идёт по настоящему каталогу миграций: в нём всегда есть применённый 0001_auth.sql.
+// Идёт по настоящему каталогу миграций: в нём всегда есть применённый 0001_auth.sql. Образец имени
+// и повтор номера проверяет `migrate.db.test.ts`.
 describe("имя новой миграции", () => {
   test("номер больше всех в каталоге – можно", async () => {
     await expect(checkNewMigrationName("9999_next.sql")).resolves.toBeUndefined();
@@ -11,18 +12,6 @@ describe("имя новой миграции", () => {
   test("номер меньше последнего – отказ: файл встал бы перед применённым", async () => {
     await expect(checkNewMigrationName("0000_early.sql")).rejects.toThrow(
       "Номер новой миграции 0000_early.sql должен быть больше",
-    );
-  });
-
-  test("занятый номер – отказ", async () => {
-    await expect(checkNewMigrationName("0001_again.sql")).rejects.toThrow(
-      "Номер миграции повторяется: 0001",
-    );
-  });
-
-  test("имя не по образцу – отказ", async () => {
-    await expect(checkNewMigrationName("2_fix.sql")).rejects.toThrow(
-      "Имя миграции не по образцу NNNN_name.sql",
     );
   });
 });
