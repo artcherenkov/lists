@@ -25,7 +25,7 @@ export function telegramNotifications({
     manyWrongCodes: async ({ failures }) => {
       await api.sendMessage(
         ownerId,
-        `За последний час в Lists ввели ${failures} неверных кодов: похоже, коды подбирают.`,
+        `Неверных кодов в Lists за последний час: ${failures}. Похоже, коды подбирают.`,
       );
     },
   };
@@ -65,7 +65,7 @@ const SYSTEMS = [
 ] as const;
 
 /** «Safari, iPhone» из строки браузера; чего не узнали, того в описании нет. */
-export function describeBrowser(userAgent: string | null) {
+function describeBrowser(userAgent: string | null) {
   if (!userAgent) return "браузер неизвестен";
   const browser = BROWSERS.find(([mark]) => userAgent.includes(mark))?.[1];
   const system = SYSTEMS.find(([mark]) => userAgent.includes(mark))?.[1];

@@ -2,7 +2,7 @@ import type { BotApi } from "../bot-api.ts";
 
 import { expect, test, vi } from "vitest";
 
-import { describeBrowser, telegramNotifications } from "../notifications.ts";
+import { telegramNotifications } from "../notifications.ts";
 
 function recordingApi() {
   const sendMessage = vi.fn<BotApi["sendMessage"]>(async () => {});
@@ -34,7 +34,7 @@ test("о подборе кодов бот пишет владельцу", async 
 
   expect(sendMessage).toHaveBeenCalledWith(
     "1",
-    "За последний час в Lists ввели 101 неверных кодов: похоже, коды подбирают.",
+    "Неверных кодов в Lists за последний час: 101. Похоже, коды подбирают.",
   );
 });
 
@@ -62,6 +62,14 @@ test.each([
   ["Mozilla/5.0 (X11; Linux x86_64; rv:144.0) Gecko/20100101 Firefox/144.0", "Firefox, Linux"],
   ["curl/8.5.0", "браузер неизвестен"],
   [null, "браузер неизвестен"],
-])("браузер из строки %s – %s", (userAgent, expected) => {
-  expect(describeBrowser(userAgent)).toBe(expected);
+])("браузер из строки %s – %s", async (userAgent, expected) => {
+  const { api, sendMessage } = recordingApi();
+
+  await telegramNotifications({ api, ownerId: "1" }).signedIn({
+    telegramId: "1001",
+    userAgent,
+    at: new Date("2026-10-21T11:04:00Z"),
+  });
+
+  expect(sendMessage.mock.calls[0]?.[1]).toContain(`по Москве, ${expected}.\n`);
 });

@@ -21,7 +21,7 @@ export interface FakeBotApi {
    * доставляет обновления «хотя бы раз».
    */
   sendUpdate(message: Omit<Message, "message_id"> & { message_id?: number }): void;
-  /** Что бот прислал в чат, по порядку. */
+  /** Что бот прислал в чат, по порядку, – как это покажет Telegram. */
   sentTo(chatId: number): string[];
   /**
    * Запросы метода остаются без ответа, как через зависший прокси, пока не вызвана возвращённая
@@ -44,7 +44,7 @@ export async function startFakeBotApi({
 }: {
   token: string;
   port?: number;
-  /** Бот прислал сообщение: в разработке его печатает консоль. */
+  /** Бот прислал сообщение – текст, как его покажет Telegram: в разработке его печатает консоль. */
   onSent?: (chatId: number, text: string) => void;
 }): Promise<FakeBotApi> {
   const updates: Update[] = [];
@@ -99,8 +99,9 @@ export async function startFakeBotApi({
       }
       case "sendMessage": {
         const chatId = Number(params.chat_id);
-        sent.push({ chatId, text: params.text });
-        onSent?.(chatId, params.text);
+        const text = params.parse_mode === "HTML" ? withoutHtml(params.text) : params.text;
+        sent.push({ chatId, text });
+        onSent?.(chatId, text);
         return c.json({ ok: true, result: { message_id: nextMessageId++ } });
       }
       default:
@@ -137,4 +138,14 @@ export async function startFakeBotApi({
       await new Promise((resolve) => server.close(resolve));
     },
   };
+}
+
+/** Telegram показывает текст с `parse_mode: "HTML"` без тегов и с раскрытыми сущностями. */
+function withoutHtml(html: string) {
+  return html
+    .replaceAll(/<[^>]*>/g, "")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&amp;", "&");
 }

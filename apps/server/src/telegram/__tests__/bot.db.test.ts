@@ -70,7 +70,7 @@ async function waitForAnswers(user: FakeUser, count: number) {
 }
 
 function codeIn(message: string | undefined) {
-  const code = message?.match(/<code>(\d{8})<\/code>/)?.[1];
+  const code = message?.match(/^Код для входа в Lists: (\d{8})$/m)?.[1];
   if (!code) throw new Error(`В сообщении нет кода: ${message}`);
   return code;
 }
