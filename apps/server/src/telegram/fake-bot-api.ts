@@ -53,6 +53,7 @@ export async function startFakeBotApi({
   // Метод, который не отвечает, и что сделать, когда его запрос дойдёт.
   const stalled = new Map<string, () => void>();
   // После `close` ни один запрос не ждёт: иначе сервер ждал бы конца его срока.
+  let isClosed = false;
   let closed = () => {};
   const closing = new Promise<void>((resolve) => {
     closed = resolve;
@@ -70,6 +71,10 @@ export async function startFakeBotApi({
 
   function waitForUpdate(timeoutMs: number) {
     return new Promise<void>((resolve) => {
+      if (isClosed) {
+        resolve();
+        return;
+      }
       const wake = () => {
         clearTimeout(timer);
         waiting.delete(wake);
@@ -77,7 +82,6 @@ export async function startFakeBotApi({
       };
       const timer = setTimeout(wake, timeoutMs);
       waiting.add(wake);
-      void closing.then(wake);
     });
   }
 
@@ -145,6 +149,8 @@ export async function startFakeBotApi({
       return { arrived, resume: () => stalled.delete(method) };
     },
     close: async () => {
+      isClosed = true;
+      for (const wake of waiting) wake();
       closed();
       await new Promise((resolve) => server.close(resolve));
     },
