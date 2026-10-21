@@ -178,27 +178,27 @@ test("повторно доставленный /start остаётся без �
   expect((await signIn(codeIn(messages[0]))).status).toBe(200);
 });
 
-test("остановка посреди ответа подтверждает разобранное: после перезапуска оно не приходит заново", async () => {
+test("остановка посреди пачки: разобранное подтверждено, остаток придёт после перезапуска", async () => {
   await startFakeTelegram();
   const first = await startTestBot();
   const anna = newUser();
+  const boris = newUser("Борис");
   const errors = silenceErrors();
   try {
-    // Отправка кода висит, пока сервер останавливается: бот ещё разбирает пачку.
+    // Отправка кода Анне висит, пока сервер останавливается; `/start` Бориса – в той же пачке.
     const resume = fake.stall("sendMessage");
     fake.send(anna, "/start");
+    fake.send(boris, "/start");
     await vi.waitFor(async () => expect(await liveCodes(anna)).toBe(1), SLOW);
     await first.stop();
     resume();
   } finally {
     errors.mockRestore();
   }
-  // Код погашен, как после входа: повтор того же `/start` выдал бы новый.
+  // Код Анны погашен, как после входа: повтор её `/start` выдал бы новый.
   await pool.query('DELETE FROM auth."telegramCode" WHERE "telegramId" = $1', [String(anna.id)]);
 
   await startTestBot();
-  const boris = newUser("Борис");
-  fake.send(boris, "/start");
   await waitForAnswers(boris, 1);
 
   expect(fake.sentTo(anna.id)).toEqual([]);

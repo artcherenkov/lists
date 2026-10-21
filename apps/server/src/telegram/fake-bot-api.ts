@@ -99,7 +99,10 @@ export async function startFakeBotApi({
       }
       case "sendMessage": {
         const chatId = Number(params.chat_id);
-        const text = params.parse_mode === "HTML" ? withoutHtml(params.text) : params.text;
+        const text = params.parse_mode === "HTML" ? renderHtml(params.text) : params.text;
+        if (text === null) {
+          return c.json({ ok: false, description: "Bad Request: can't parse entities" }, 400);
+        }
         sent.push({ chatId, text });
         onSent?.(chatId, text);
         return c.json({ ok: true, result: { message_id: nextMessageId++ } });
@@ -140,12 +143,22 @@ export async function startFakeBotApi({
   };
 }
 
-/** Telegram показывает текст с `parse_mode: "HTML"` без тегов и с раскрытыми сущностями. */
-function withoutHtml(html: string) {
-  return html
-    .replaceAll(/<[^>]*>/g, "")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&amp;", "&");
+// Теги, которыми пишет бот; Telegram знает и другие, подделке они пока не нужны.
+const TAG = /<\/?(?:b|i|u|s|code|pre)>/g;
+const ENTITY = /&(?:lt|gt|amp|quot|#\d+|#x[\da-f]+);/gi;
+const NAMED_ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"' };
+
+/**
+ * Текст с `parse_mode: "HTML"`, как его покажет Telegram: без тегов и с раскрытыми сущностями.
+ * `<`, `>` и `&` вне тега и сущности Telegram не принимает, тогда – `null`.
+ */
+function renderHtml(html: string) {
+  const text = html.replaceAll(TAG, "");
+  if (/[<>]/.test(text) || text.replaceAll(ENTITY, "").includes("&")) return null;
+  return text.replaceAll(ENTITY, (entity) => {
+    const name = entity.slice(1, -1).toLowerCase();
+    if (!name.startsWith("#")) return NAMED_ENTITIES[name] ?? entity;
+    const code = name.startsWith("#x") ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1));
+    return String.fromCodePoint(code);
+  });
 }

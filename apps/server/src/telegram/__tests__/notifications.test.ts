@@ -71,5 +71,8 @@ test.each([
     at: new Date("2026-10-21T11:04:00Z"),
   });
 
-  expect(sendMessage.mock.calls[0]?.[1]).toContain(`по Москве, ${expected}.\n`);
+  expect(sendMessage).toHaveBeenCalledExactlyOnceWith(
+    "1001",
+    expect.stringContaining(`по Москве, ${expected}.\n`),
+  );
 });

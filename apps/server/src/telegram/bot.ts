@@ -26,7 +26,10 @@ const BOT_TIMING: BotTiming = {
 const START = /^\/start(?:@\w+)?(?:\s|$)/;
 
 export interface Bot {
-  /** Обрывает опрос, ждёт, пока бот ответит на полученные сообщения, и подтверждает их Telegram. */
+  /**
+   * Обрывает опрос, ждёт начатого ответа и подтверждает Telegram разобранные сообщения; остальные
+   * Telegram доставит после перезапуска.
+   */
   stop(): Promise<void>;
 }
 
@@ -95,6 +98,9 @@ export function startBot({
         continue;
       }
       for (const update of updates) {
+        // Каждый ответ может ждать Telegram до срока: остаток пачки задержал бы остановку дольше,
+        // чем Docker ждёт процесс.
+        if (stopping.signal.aborted) break;
         // Номер сдвигается и после ошибки: иначе бот повторял бы одно сообщение и не выдал бы
         // кода никому.
         offset = update.update_id + 1;
