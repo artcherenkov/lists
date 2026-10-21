@@ -1,7 +1,8 @@
 import { ListFilters, type ListFiltersValue } from "@lists/ui/components/list-filters";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
+import { ConnectedLoginScreen } from "./connected-login-screen.tsx";
 import { ConnectedProfileSheet } from "./connected-profile-sheet.tsx";
 import { searchSampleCatalog } from "./sample/sample-catalog.ts";
 import { useSampleList } from "./sample/use-sample-list.ts";
@@ -23,11 +24,30 @@ import {
 import { AddSheet, openAddSheet } from "./screens/add-sheet.tsx";
 import { ItemSheet } from "./screens/item-sheet.tsx";
 import { ListScreen } from "./screens/list-screen.tsx";
+import { type Account, getAccount, subscribeAccount } from "./session/session.ts";
 import { useServiceWorker } from "./use-service-worker.ts";
 
-// Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
+/**
+ * Корень приложения: service worker – при любом экране, список – только вошедшему, иначе экран
+ * входа.
+ */
 export function App() {
   const { isNewVersionReady, updateToNewVersion } = useServiceWorker();
+  const account = useSyncExternalStore(subscribeAccount, getAccount);
+  const onUpdate = isNewVersionReady ? updateToNewVersion : undefined;
+
+  if (!account) return <ConnectedLoginScreen onUpdate={onUpdate} />;
+  return <Watchlist account={account} onUpdate={onUpdate} />;
+}
+
+// Подставное состояние до слоя данных: записи в памяти, фильтры записи не отбирают.
+function Watchlist({
+  account,
+  onUpdate,
+}: {
+  account: Account;
+  onUpdate: (() => void) | undefined;
+}) {
   const list = useSampleList();
   const [tab, setTab] = useState(ALL_TAB);
   const [filters, setFilters] = useState<ListFiltersValue>(DEFAULT_FILTERS);
@@ -73,7 +93,7 @@ export function App() {
         onOpenItem={setOpenedId}
         onAdd={() => openAddSheet(() => setAdding(true))}
         onOpenProfile={() => setProfileOpen(true)}
-        onUpdate={isNewVersionReady ? updateToNewVersion : undefined}
+        onUpdate={onUpdate}
       />
 
       {adding && (
@@ -106,7 +126,9 @@ export function App() {
         />
       )}
 
-      {profileOpen && <ConnectedProfileSheet onClosed={() => setProfileOpen(false)} />}
+      {profileOpen && (
+        <ConnectedProfileSheet accountName={account.name} onClosed={() => setProfileOpen(false)} />
+      )}
     </>
   );
 }

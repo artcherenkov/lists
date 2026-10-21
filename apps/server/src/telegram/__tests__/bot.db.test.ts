@@ -6,7 +6,11 @@ import type pg from "pg";
 
 import { afterEach, beforeAll, expect, test, vi } from "vitest";
 
-import { IGNORED_EVENTS, TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
+import {
+  IGNORED_EVENTS,
+  TEST_AUTH_CONFIG as config,
+  TEST_BOT_USERNAME,
+} from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { createAuth } from "../../auth/auth.ts";
 import { issueTelegramCode } from "../../auth/telegram-login.ts";
@@ -28,7 +32,7 @@ beforeAll(async () => {
   const database = await createTestDatabase();
   pool = database.pool;
   auth = createAuth({ pool, config, events: IGNORED_EVENTS });
-  app = createApp({ auth, pool });
+  app = createApp({ auth, pool, botUsername: TEST_BOT_USERNAME });
   return database.drop;
 });
 

@@ -7,6 +7,9 @@ export const TEST_AUTH_CONFIG: AuthConfig = {
   authSecret: "test-secret-0123456789-0123456789-0123456789",
 };
 
+/** Имя бота входа в тестах. */
+export const TEST_BOT_USERNAME = "lists_test_bot";
+
 /** Оповещения входа, которые никуда не уходят; тест, которому они важны, подставляет свои. */
 export const IGNORED_EVENTS: TelegramLoginEvents = {
   signedIn: async () => {},

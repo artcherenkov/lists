@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { brokenStorage, memoryStorage } from "../../storage/__tests__/fake-storage.ts";
 import { importProbeLog } from "../probe-import.ts";
 import { createJournalStore, JOURNAL_KEY } from "../store.ts";
-import { brokenStorage, memoryStorage } from "./fake-storage.ts";
 
 const probeEntries = (count: number) =>
   JSON.stringify(Array.from({ length: count }, (_, i) => ({ t: i, e: "launch", d: `p${i}` })));

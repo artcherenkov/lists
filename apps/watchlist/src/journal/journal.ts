@@ -1,3 +1,4 @@
+import { browserStorage } from "../storage/storage.ts";
 import { type JournalEntry, formatCopy } from "./entries.ts";
 import {
   describeLaunch,
@@ -9,7 +10,6 @@ import {
 } from "./lifecycle.ts";
 import { recordPersistence } from "./persistence.ts";
 import { importProbeLog } from "./probe-import.ts";
-import { browserStorage } from "./storage.ts";
 import { type Log, createJournalStore } from "./store.ts";
 import {
   type RegistrationLike,

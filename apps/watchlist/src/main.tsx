@@ -6,8 +6,10 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { App } from "./App.tsx";
 import { startJournal } from "./journal/journal.ts";
+import { startSession } from "./session/session.ts";
 
 startJournal();
+startSession();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

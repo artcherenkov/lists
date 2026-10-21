@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { brokenStorage, memoryStorage } from "../../storage/__tests__/fake-storage.ts";
 import {
   describeLaunch,
   describeLaunchKind,
@@ -14,7 +15,6 @@ import {
   writePageState,
   type PageState,
 } from "../lifecycle.ts";
-import { brokenStorage, memoryStorage } from "./fake-storage.ts";
 import { moscow, useMoscowTime } from "./setup-time.ts";
 
 describe("вид запуска", () => {

@@ -6,20 +6,41 @@ import { preview } from "vite";
 /**
  * Отдаёт собранный каталог готовым `preview()` из Vite на `127.0.0.1`: единственное место запуска
  * `preview` у кирпичиков сервера. `onServed` вызывается, когда сервер целиком ответил на запрос.
- * Порт 0 – свободный; с другим портом занятый порт – ошибка, а не молчаливая замена.
+ * Порт 0 – свободный; с другим портом занятый порт – ошибка, а не молчаливая замена. С `apiUrl`
+ * запросы `/api/` идут на сервер по этому адресу, как их ведёт Caddy на v2, с заголовком
+ * `X-Real-IP`. Caddy ставит в него адрес браузера, а здесь он остаётся, если его задал тест: у
+ * каждого теста свой адрес и свой предел попыток входа.
  */
 export async function startPreview(
   buildDir: string,
-  options: { port?: number; onServed?: (pathname: string) => void } = {},
+  options: { port?: number; apiUrl?: string; onServed?: (pathname: string) => void } = {},
 ): Promise<PreviewServer> {
-  const { port = 0, onServed } = options;
+  const { port = 0, apiUrl, onServed } = options;
   return preview({
     configFile: false,
     root: buildDir,
     logLevel: "error",
     build: { outDir: buildDir },
     // host не 0.0.0.0: сервер не должен быть виден из сети.
-    preview: { host: "127.0.0.1", port, strictPort: port !== 0, open: false },
+    preview: {
+      host: "127.0.0.1",
+      port,
+      strictPort: port !== 0,
+      open: false,
+      proxy: apiUrl
+        ? {
+            "/api/": {
+              target: apiUrl,
+              configure: (proxy) =>
+                proxy.on("proxyReq", (proxyRequest) => {
+                  if (!proxyRequest.getHeader("x-real-ip")) {
+                    proxyRequest.setHeader("x-real-ip", "127.0.0.1");
+                  }
+                }),
+            },
+          }
+        : undefined,
+    },
     plugins: [
       {
         name: "tests:full-responses-only",

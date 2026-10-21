@@ -4,7 +4,7 @@ import type pg from "pg";
 import { randomInt } from "node:crypto";
 import { beforeAll, expect, test, vi } from "vitest";
 
-import { TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
+import { TEST_AUTH_CONFIG as config, TEST_BOT_USERNAME } from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { createApp } from "../../http/app.ts";
 import { createAuth } from "../auth.ts";
@@ -48,7 +48,7 @@ function startServer() {
     manyWrongCodes: vi.fn<TelegramLoginEvents["manyWrongCodes"]>(async () => {}),
   };
   const auth = createAuth({ pool, config, events });
-  const app = createApp({ auth, pool });
+  const app = createApp({ auth, pool, botUsername: TEST_BOT_USERNAME });
   let lastMessageId = 0;
 
   return {

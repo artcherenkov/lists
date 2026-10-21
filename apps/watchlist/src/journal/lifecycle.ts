@@ -1,7 +1,7 @@
 import type { Log } from "./store.ts";
 
+import { type KeyValueStorage, readText, writeText } from "../storage/storage.ts";
 import { formatDuration, formatTime, yesNo } from "./format.ts";
-import { type KeyValueStorage, readText, writeText } from "./storage.ts";
 
 /** Что известно о странице: когда она ушла из виду и получила ли `pagehide`. */
 export interface PageState {

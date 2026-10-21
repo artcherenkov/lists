@@ -13,6 +13,8 @@ export interface ServerConfig {
   port: number;
   /** Токен бота от BotFather. */
   telegramBotToken: string;
+  /** Имя бота без `@`: по нему экран входа строит ссылку на бота. */
+  telegramBotUsername: string;
   /** Адрес Bot API: в бою – `https://api.telegram.org`, в разработке и тестах – подделка. */
   telegramApiUrl: string;
   /** id Telegram владельца: ему бот пишет о подборе кодов. */
@@ -32,6 +34,7 @@ const VARIABLES = {
   host: "HOST",
   port: "PORT",
   telegramBotToken: "TELEGRAM_BOT_TOKEN",
+  telegramBotUsername: "TELEGRAM_BOT_USERNAME",
   telegramApiUrl: "TELEGRAM_API_URL",
   telegramOwnerId: "TELEGRAM_OWNER_ID",
 } as const;
@@ -62,6 +65,11 @@ export function readConfig(env: NodeJS.ProcessEnv): ServerConfig {
   if (!/^\d+$/.test(telegramOwnerId)) {
     throw new Error(`TELEGRAM_OWNER_ID – не id Telegram: ${telegramOwnerId}`);
   }
+  // Имя уходит в ссылку `t.me/<имя>`: с `@` или пробелом ссылка открыла бы не того бота или никакого.
+  const telegramBotUsername = value(VARIABLES.telegramBotUsername);
+  if (!/^[A-Za-z0-9_]{5,32}$/.test(telegramBotUsername)) {
+    throw new Error(`TELEGRAM_BOT_USERNAME – не имя бота без @: ${telegramBotUsername}`);
+  }
   return {
     databaseUrl: value(VARIABLES.databaseUrl),
     authSecret: value(VARIABLES.authSecret),
@@ -69,6 +77,7 @@ export function readConfig(env: NodeJS.ProcessEnv): ServerConfig {
     host: value(VARIABLES.host),
     port,
     telegramBotToken: value(VARIABLES.telegramBotToken),
+    telegramBotUsername,
     telegramApiUrl,
     telegramOwnerId,
   };

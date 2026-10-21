@@ -16,8 +16,19 @@ const AUTH_ROUTES = [
   { method: "POST", path: "/sign-out" },
 ] as const;
 
-/** HTTP-слой сервера: все запросы идут под `/api/`, остальное отдаёт Caddy. */
-export function createApp({ auth, pool }: { auth: Auth; pool: pg.Pool }) {
+/**
+ * HTTP-слой сервера: все запросы идут под `/api/`, остальное отдаёт Caddy. `botUsername` – имя бота
+ * входа без `@`.
+ */
+export function createApp({
+  auth,
+  pool,
+  botUsername,
+}: {
+  auth: Auth;
+  pool: pg.Pool;
+  botUsername: string;
+}) {
   const app = new Hono();
 
   // Проверка здоровья для выкладки: сервер жив и достаёт до базы.
@@ -25,6 +36,10 @@ export function createApp({ auth, pool }: { auth: Auth; pool: pg.Pool }) {
     await pool.query("SELECT 1");
     return c.json({ ok: true });
   });
+
+  // Ссылку на бота экран входа строит из имени, которое знает сервер: сборка приложения одна на
+  // все сайты, а бот у каждого свой.
+  app.get("/api/telegram-bot", (c) => c.json({ username: botUsername }));
 
   for (const route of AUTH_ROUTES) {
     app.on(route.method, `${AUTH_BASE_PATH}${route.path}`, (c) => auth.handler(c.req.raw));

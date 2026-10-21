@@ -1,10 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 import process from "node:process";
 
-// Приложение поднимает фикстура воркера из tests/fixtures, поэтому webServer здесь нет,
+// Приложение и сервер поднимает фикстура воркера из tests/fixtures, поэтому webServer здесь нет,
 // а --list ничего не запускает.
 export default defineConfig({
   testDir: "tests/e2e",
+  // Сервер e2e работает на Postgres стека разработки, как тесты на базе: подготовка та же.
+  globalSetup: "./apps/server/src/__tests__/prepare-postgres.ts",
   outputDir: "test-results",
   fullyParallel: true,
   timeout: 30_000,

@@ -12,6 +12,9 @@ const copyRefused = () =>
   Promise.reject(new DOMException("Запись в буфер запрещена", "NotAllowedError"));
 
 interface DemoArgs {
+  accountName: string;
+  /** Выход начат, сервер ещё не ответил. */
+  signingOut: boolean;
   version: string;
   /** Пустая строка – журнал без записей. */
   journalText: string;
@@ -19,6 +22,8 @@ interface DemoArgs {
 }
 
 function ProfileSheetDemo({
+  accountName,
+  signingOut,
   version,
   journalText,
   onCopy,
@@ -29,6 +34,7 @@ function ProfileSheetDemo({
 
   return (
     <ProfileSheet
+      account={{ name: accountName, signingOut, onSignOut: () => {} }}
       version={version}
       journal={{ text, entryCount, onCopy, onClear: () => setText("") }}
       onClosed={onClosed}
@@ -49,6 +55,8 @@ const meta = {
     <Reopenable>{(onClosed) => <ProfileSheetDemo {...args} onClosed={onClosed} />}</Reopenable>
   ),
   args: {
+    accountName: "Анна Б.",
+    signingOut: false,
     version: "2026-10-02 · d5c28ef",
     journalText: SAMPLE_JOURNAL_TEXT,
     onCopy: copySucceeds,
@@ -60,6 +68,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const SigningOut: Story = {
+  args: { signingOut: true },
+};
+
+export const LongName: Story = {
+  args: { accountName: "Анна-Мария Константинопольская-Белорецкая" },
+};
 
 export const WithChanges: Story = {
   args: { version: "2026-10-02 · d5c28ef · с правками" },

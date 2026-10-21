@@ -14,12 +14,14 @@ export type SwitchableServer = {
 
 /**
  * Сервер двух сборок на одном адресе: сначала отдаёт `firstBuildDir`, после `switchToNextBuild`
- * – `nextBuildDir`. Каталоги – абсолютные пути.
+ * – `nextBuildDir`. Каталоги – абсолютные пути. С `apiUrl` обе сборки ведут `/api/` на этот сервер.
  */
 export async function startSwitchableServer(builds: {
   firstBuildDir: string;
   nextBuildDir: string;
+  apiUrl?: string;
 }): Promise<SwitchableServer> {
+  const { apiUrl } = builds;
   const waiters = new Set<{ pathname: string; resolve: () => void }>();
   const onServed = (pathname: string) => {
     for (const waiter of waiters) {
@@ -29,7 +31,10 @@ export async function startSwitchableServer(builds: {
     }
   };
 
-  let current: PreviewServer | undefined = await startPreview(builds.firstBuildDir, { onServed });
+  let current: PreviewServer | undefined = await startPreview(builds.firstBuildDir, {
+    apiUrl,
+    onServed,
+  });
   const port = portOf(current);
 
   const stop = async () => {
@@ -45,7 +50,7 @@ export async function startSwitchableServer(builds: {
     // же порту.
     switchToNextBuild: async () => {
       await stop();
-      current = await startPreview(builds.nextBuildDir, { port, onServed });
+      current = await startPreview(builds.nextBuildDir, { port, apiUrl, onServed });
     },
     waitUntilServed: (pathname) =>
       new Promise((resolve) => {

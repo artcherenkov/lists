@@ -5,6 +5,7 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 import { resolveAppVersion } from "./build/app-version.ts";
+import { CSP_PLUGIN_NAME, withContentSecurityPolicy } from "./build/content-security-policy.ts";
 
 const appRoot = fileURLToPath(new URL(".", import.meta.url));
 
@@ -15,6 +16,13 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    {
+      name: CSP_PLUGIN_NAME,
+      // Только у сборки: в разработке Vite встраивает в страницу свои скрипты, и политика их
+      // заблокировала бы. Порядок post – политика считается по странице, какой она уйдёт.
+      apply: "build",
+      transformIndexHtml: { order: "post", handler: withContentSecurityPolicy },
+    },
     VitePWA({
       strategies: "injectManifest",
       // По умолчанию плагин ищет worker в public.

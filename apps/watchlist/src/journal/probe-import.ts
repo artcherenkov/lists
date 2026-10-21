@@ -1,7 +1,7 @@
 import type { JournalStore } from "./store.ts";
 
+import { type KeyValueStorage, readText, removeKey } from "../storage/storage.ts";
 import { parseProbeLog } from "./entries.ts";
-import { type KeyValueStorage, readText, removeKey } from "./storage.ts";
 
 // TODO: удалить, когда продуктовая версия хотя бы раз запустится на телефоне автора: записи пробы
 // есть только там. Вместе с этим файлом и `probe-import.test.ts` уходят:

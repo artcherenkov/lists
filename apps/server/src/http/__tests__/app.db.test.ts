@@ -4,7 +4,11 @@ import type pg from "pg";
 
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import { IGNORED_EVENTS, TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
+import {
+  IGNORED_EVENTS,
+  TEST_AUTH_CONFIG as config,
+  TEST_BOT_USERNAME,
+} from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { createAuth } from "../../auth/auth.ts";
 import { createPool } from "../../database/pool.ts";
@@ -19,7 +23,7 @@ describe("HTTP-слой на базе с миграциями", () => {
     const database = await createTestDatabase();
     pool = database.pool;
     auth = createAuth({ pool, config, events: IGNORED_EVENTS });
-    app = createApp({ auth, pool });
+    app = createApp({ auth, pool, botUsername: TEST_BOT_USERNAME });
     return database.drop;
   });
 
@@ -34,13 +38,24 @@ describe("HTTP-слой на базе с миграциями", () => {
     const unreachable = createPool("postgres://lists:lists@127.0.0.1:1/none");
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      const response = await createApp({ auth, pool: unreachable }).request("/api/health");
+      const response = await createApp({
+        auth,
+        pool: unreachable,
+        botUsername: TEST_BOT_USERNAME,
+      }).request("/api/health");
 
       expect(response.status).toBe(500);
     } finally {
       errors.mockRestore();
       await unreachable.end();
     }
+  });
+
+  test("имя бота для ссылки экрана входа", async () => {
+    const response = await app.request("/api/telegram-bot");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ username: "lists_test_bot" });
   });
 
   test("сессия без cookie – null", async () => {

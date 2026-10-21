@@ -33,7 +33,7 @@ const events = telegramNotifications({ api: botApi, ownerId: config.telegramOwne
 const auth = createAuth({ pool, config, events });
 await checkAuthSchema(auth);
 
-const app = createApp({ auth, pool });
+const app = createApp({ auth, pool, botUsername: config.telegramBotUsername });
 const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (address) => {
   console.log(`Сервер слушает ${address.address}:${address.port}`);
 });

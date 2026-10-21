@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { brokenStorage, fullStorage, memoryStorage } from "../../storage/__tests__/fake-storage.ts";
 import { createJournalStore, JOURNAL_KEY } from "../store.ts";
-import { brokenStorage, fullStorage, memoryStorage } from "./fake-storage.ts";
 
 function clock(...times: number[]) {
   let i = 0;

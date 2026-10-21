@@ -9,6 +9,7 @@ const complete = {
   HOST: "0.0.0.0",
   PORT: "3400",
   TELEGRAM_BOT_TOKEN: "123:token",
+  TELEGRAM_BOT_USERNAME: "lists_bot",
   TELEGRAM_API_URL: "https://api.telegram.org",
   TELEGRAM_OWNER_ID: "1000",
 };
@@ -22,6 +23,7 @@ describe("настройки сервера из окружения", () => {
       host: "0.0.0.0",
       port: 3400,
       telegramBotToken: "123:token",
+      telegramBotUsername: "lists_bot",
       telegramApiUrl: "https://api.telegram.org",
       telegramOwnerId: "1000",
     });
@@ -51,6 +53,14 @@ describe("настройки сервера из окружения", () => {
     }
     for (const NODE_ENV of ["development", "test"]) {
       expect(readConfig({ ...fake, NODE_ENV }).telegramApiUrl).toBe("http://127.0.0.1:3401");
+    }
+  });
+
+  test("имя бота с @, ссылкой или пробелом – отказ", () => {
+    for (const name of ["@lists_bot", "t.me/lists_bot", "lists bot"]) {
+      expect(() => readConfig({ ...complete, TELEGRAM_BOT_USERNAME: name })).toThrow(
+        `TELEGRAM_BOT_USERNAME – не имя бота без @: ${name}`,
+      );
     }
   });
 

@@ -156,3 +156,23 @@ test("недоступный сервер: проверка новой верс�
   expect(pageErrors).toEqual([]);
   await expect(newVersionButton(page)).toBeHidden();
 });
+
+test.describe("без входа", () => {
+  test.use({ signedIn: false });
+
+  // Исправление входа должно дойти и до того, кто войти не может.
+  test("экран входа тоже предлагает новую версию, и «Обновить» её включает", async ({
+    page,
+    ownServer,
+  }) => {
+    await openFirstBuildUnderWorker(page, ownServer);
+    await expect(page.getByLabel("Код из Telegram", { exact: true })).toBeVisible();
+    await ownServer.switchToNextBuild();
+    await returnToApp(page);
+
+    await newVersionButton(page).click();
+
+    await expect(newVersionButton(page)).toBeHidden();
+    await expect(page.getByLabel("Код из Telegram", { exact: true })).toBeVisible();
+  });
+});

@@ -1,3 +1,4 @@
+import { type KeyValueStorage, readText, removeKey, writeText } from "../storage/storage.ts";
 import {
   type JournalEntry,
   appendEntries,
@@ -5,7 +6,6 @@ import {
   parseEntries,
   prependEntries,
 } from "./entries.ts";
-import { type KeyValueStorage, readText, removeKey, writeText } from "./storage.ts";
 
 export const JOURNAL_KEY = "app-journal";
 
