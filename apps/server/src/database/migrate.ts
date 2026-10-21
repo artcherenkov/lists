@@ -38,10 +38,10 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
   checkMigrationNames(migrations.map((file) => file.name));
   const files = [...migrations].sort((a, b) => (a.name < b.name ? -1 : 1));
   const client = await pool.connect();
-  let committed = false;
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock($1)", [MIGRATION_LOCK]);
+    const transaction = await currentTransaction(client);
     await client.query(`CREATE TABLE IF NOT EXISTS public.schema_migrations (
       name text PRIMARY KEY,
       sha256 text NOT NULL,
@@ -68,23 +68,35 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
     const applied: string[] = [];
     for (const file of files.slice(common)) {
       await client.query(file.sql);
+      // `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию: прежние файлы остались бы
+      // без следующих, а блокировка снялась бы. Отказ ловит такой файл уже в тестах.
+      if ((await currentTransaction(client)) !== transaction) {
+        throw new Error(
+          `Миграция ${file.name} сама завершает транзакцию: уберите COMMIT и ROLLBACK`,
+        );
+      }
       await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
         file.name,
         sha256Of(file.sql),
       ]);
       applied.push(file.name);
-      // `SET` из файла не должен действовать на следующие файлы и уйти с соединением в пул:
-      // иначе результат файла зависел бы от того, с какими файлами он применён одним запуском.
+      // Настройки из `SET` в файле не действуют на следующие файлы: иначе результат файла зависел
+      // бы от того, с какими файлами он применён одним запуском. Роль `RESET ALL` не снимает.
       await client.query("RESET ALL");
     }
     await client.query("COMMIT");
-    committed = true;
     return { applied, unknown: appliedBefore.slice(common).map((row) => row.name) };
   } finally {
-    // Без COMMIT пул закрывает соединение, и Postgres сам откатывает транзакцию и снимает
+    // Соединение закрывается всегда: роль и прочее состояние сеанса из миграции не уйдут с ним
+    // в запросы сервера. Без COMMIT Postgres при закрытии сам откатывает транзакцию и снимает
     // блокировку; отдельный ROLLBACK на оборванном соединении упал бы и скрыл исходную ошибку.
-    client.release(!committed);
+    client.release(true);
   }
+}
+
+async function currentTransaction(client: pg.PoolClient) {
+  const result = await client.query<{ id: string }>("SELECT pg_current_xact_id()::text AS id");
+  return result.rows[0]?.id;
 }
 
 function sha256Of(sql: string) {

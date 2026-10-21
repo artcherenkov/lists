@@ -79,8 +79,8 @@
 | `page`, `openJournal`, `clock`, `permissions` | `tests/e2e/watchlist/journal-screen.spec.ts` – экран журнала: открытие из профиля, прокрутка, копирование, отказ буфера, «Очистить», свайпы |
 | `page`, `openJournal`, `ownServer`, `serviceWorkers: "allow"` | `tests/e2e/app/journal.spec.ts` – журнал пишет запуск, возвраты, перенос записей пробы, проверку и включение новой версии и переживает обновление |
 | unit, строка журнала | `tests/fixtures/__tests__/journal-line.test.ts` – какие строки подходят под `journalLine` |
-| db, пустая база на тест | `apps/server/src/database/__tests__/migrate.db.test.ts` – миграции: порядок, откат упавшего запуска, изменённый файл, файл перед применённым, миграция ветки в базе, имя без номера, повтор номера, `SET` файла не действует на следующие файлы и пул, одновременные запуски |
-| unit | `apps/server/src/database/__tests__/migration-files.test.ts` – номер новой миграции больше всех в каталоге |
+| db, пустая база на тест | `apps/server/src/database/__tests__/migrate.db.test.ts` – миграции: порядок, откат упавшего запуска, изменённый файл, файл перед применённым, миграция ветки в базе, имя без номера, повтор номера, файл с `COMMIT`, `SET` файла не действует на следующие файлы, соединение миграций не уходит в пул, одновременные запуски |
+| unit | `apps/server/src/database/__tests__/migration-files.test.ts` – номер новой миграции больше всех в каталоге и не занят |
 | db, пустая база на тест | `apps/server/src/database/__tests__/migrations-only-add.db.test.ts` – типичные нарушения правила «только добавляют» в каждой миграции релиза: снимки схемы до и после файла (`schema-snapshot.ts`) |
 | db, пустая база на тест | `apps/server/src/database/__tests__/pool.db.test.ts` – обрыв простаивающего и взятого соединения не роняет процесс |
 | db, `app.request()` | `apps/server/src/http/__tests__/app.db.test.ts` – проверка здоровья с базой и без, сессия, закрытые маршруты better-auth, проверка Origin, пределы по IP из `X-Real-IP` |

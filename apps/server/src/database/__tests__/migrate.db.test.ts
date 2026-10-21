@@ -80,6 +80,16 @@ describe("миграции", () => {
     expect(await tables()).not.toContain("third");
   });
 
+  test("отказывает в файле, который сам завершает транзакцию", async () => {
+    const commits = { name: "0002_commits.sql", sql: "CREATE TABLE commits (id int); COMMIT" };
+    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
+
+    await expect(migrate(pool, [first, commits, third])).rejects.toThrow(
+      "Миграция 0002_commits.sql сама завершает транзакцию",
+    );
+    expect(await tables()).not.toContain("third");
+  });
+
   test("отказывает в файле без номера в имени, ничего не применяя", async () => {
     const unnumbered = { name: "fix_auth.sql", sql: "CREATE TABLE fix (id int)" };
 
@@ -104,17 +114,24 @@ describe("миграции", () => {
     expect(await migrate(pool, [first])).toEqual({ applied: [], unknown: ["0002_second.sql"] });
   });
 
-  test("SET из файла не действует на следующие файлы и другие запросы пула", async () => {
+  test("SET из файла не действует на следующие файлы, а соединение миграций не уходит в пул", async () => {
     const searchPath = async () =>
       (await pool.query<{ search_path: string }>("SHOW search_path")).rows[0]?.search_path;
     const before = await searchPath();
     const setsPath = { name: "0001_sets_path.sql", sql: "CREATE SCHEMA s; SET search_path = s" };
-    const next = { name: "0002_next.sql", sql: "CREATE TABLE next (id int)" };
+    // Роль и прочее состояние сеанса `RESET ALL` не снимает: соединение миграций закрывается.
+    const next = {
+      name: "0002_next.sql",
+      sql: "CREATE TABLE next (id int); CREATE TABLE public.migration_pid AS SELECT pg_backend_pid() AS pid",
+    };
 
     await migrate(pool, [setsPath, next]);
 
     expect(await tables()).toContain("next");
     expect(await searchPath()).toBe(before);
+    const migration = await pool.query<{ pid: number }>("SELECT pid FROM public.migration_pid");
+    const server = await pool.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
+    expect(server.rows[0]?.pid).not.toBe(migration.rows[0]?.pid);
   });
 
   test("два одновременных запуска применяют файл один раз", async () => {
