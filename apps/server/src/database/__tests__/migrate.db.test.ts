@@ -29,6 +29,7 @@ async function appliedNames() {
 
 const first = { name: "0001_first.sql", sql: "CREATE TABLE first (id int)" };
 const second = { name: "0002_second.sql", sql: "CREATE TABLE second (id int)" };
+const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
 
 describe("миграции", () => {
   test("применяет новые файлы по порядку, повторный запуск ничего не применяет", async () => {
@@ -62,7 +63,6 @@ describe("миграции", () => {
   });
 
   test("отказывает в новом файле, который по имени встаёт перед применённым", async () => {
-    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
     await migrate(pool, [first, third]);
 
     await expect(migrate(pool, [first, second, third])).rejects.toThrow(
@@ -74,7 +74,6 @@ describe("миграции", () => {
   test("отказывает, если в базе осталась миграция ветки, которой нет в релизе", async () => {
     const branch = { name: "0002_branch.sql", sql: "CREATE TABLE branch (id int)" };
     await migrate(pool, [first, branch]);
-    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
 
     await expect(migrate(pool, [first, second, third])).rejects.toThrow(
       "Миграции базы расходятся с релизом: 2-я в базе – 0002_branch.sql, в релизе – 0002_second.sql",
@@ -115,13 +114,20 @@ describe("миграции", () => {
 
   test("уборка временных объектов в файле не мешает следующим файлам", async () => {
     const cleanup = { name: "0002_cleanup.sql", sql: "CREATE TABLE kept (id int); DISCARD TEMP" };
-    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
 
     expect((await migrate(pool, [first, cleanup, third])).applied).toEqual([
       "0001_first.sql",
       "0002_cleanup.sql",
       "0003_third.sql",
     ]);
+  });
+
+  test("файл, текст которого Postgres не принял, назван в ошибке", async () => {
+    const nul = { name: "0002_nul.sql", sql: "CREATE TABLE nul (id int);\u0000" };
+
+    await expect(migrate(pool, [first, nul])).rejects.toThrow(
+      "Миграция 0002_nul.sql не применилась: invalid byte sequence",
+    );
   });
 
   test("отказывает в файле без номера в имени, ничего не применяя", async () => {
