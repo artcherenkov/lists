@@ -31,6 +31,11 @@ const MIGRATION_LOCK = 6_000_001;
  * выкладки базу не трогает (решение 9 вехи 6). Типичные нарушения ловит тест
  * `__tests__/migrations-only-add.db.test.ts`, правило целиком проверяет ревью миграции.
  *
+ * Файл не управляет транзакцией и сеансом: в нём нет `BEGIN`, `COMMIT`, `ROLLBACK`, `SET ROLE`
+ * и временных таблиц, иначе он влиял бы на следующие файлы запуска. Настройки из `SET` после
+ * файла сбрасываются. `COMMIT` и `ROLLBACK` запуск замечает, но уже после того, как часть запуска
+ * закреплена в базе, поэтому такой файл должны поймать тесты на пустой базе.
+ *
  * Применённый файл не меняют и не удаляют, в том числе через `git revert`, даже комментарий:
  * сверка идёт по сумме всего файла. Ошибку исправляет новый файл.
  */
@@ -68,11 +73,11 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
     const applied: string[] = [];
     for (const file of files.slice(common)) {
       await client.query(file.sql);
-      // `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию: прежние файлы остались бы
-      // без следующих, а блокировка снялась бы. Отказ ловит такой файл уже в тестах.
+      // Сразу после файла: его `SET` не действует ни на запросы запуска, ни на следующие файлы.
+      await client.query("RESET ALL");
       if ((await currentTransaction(client)) !== transaction) {
         throw new Error(
-          `Миграция ${file.name} сама завершает транзакцию: уберите COMMIT и ROLLBACK`,
+          `Миграция ${file.name} сама завершила транзакцию, и часть запуска уже закреплена в базе: уберите COMMIT и ROLLBACK из файла`,
         );
       }
       await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
@@ -80,15 +85,12 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
         sha256Of(file.sql),
       ]);
       applied.push(file.name);
-      // Настройки из `SET` в файле не действуют на следующие файлы: иначе результат файла зависел
-      // бы от того, с какими файлами он применён одним запуском. Роль `RESET ALL` не снимает.
-      await client.query("RESET ALL");
     }
     await client.query("COMMIT");
     return { applied, unknown: appliedBefore.slice(common).map((row) => row.name) };
   } finally {
-    // Соединение закрывается всегда: роль и прочее состояние сеанса из миграции не уйдут с ним
-    // в запросы сервера. Без COMMIT Postgres при закрытии сам откатывает транзакцию и снимает
+    // Соединение закрывается всегда: состояние сеанса из миграции, которое `RESET ALL` не снимает,
+    // не уйдёт с ним в запросы сервера. Без COMMIT Postgres при закрытии сам откатывает транзакцию и снимает
     // блокировку; отдельный ROLLBACK на оборванном соединении упал бы и скрыл исходную ошибку.
     client.release(true);
   }

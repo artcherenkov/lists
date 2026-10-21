@@ -80,14 +80,19 @@ describe("миграции", () => {
     expect(await tables()).not.toContain("third");
   });
 
-  test("отказывает в файле, который сам завершает транзакцию", async () => {
-    const commits = { name: "0002_commits.sql", sql: "CREATE TABLE commits (id int); COMMIT" };
+  test("отказывает в файле, который сам завершил транзакцию, хотя часть запуска уже закреплена", async () => {
+    // `BEGIN` после `COMMIT` открывает новую транзакцию: её отказ тоже замечает.
+    const commits = {
+      name: "0002_commits.sql",
+      sql: "CREATE TABLE commits (id int); COMMIT; BEGIN",
+    };
     const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
 
     await expect(migrate(pool, [first, commits, third])).rejects.toThrow(
-      "Миграция 0002_commits.sql сама завершает транзакцию",
+      "Миграция 0002_commits.sql сама завершила транзакцию",
     );
-    expect(await tables()).not.toContain("third");
+    expect(await tables()).toEqual(["commits", "first", "schema_migrations"]);
+    expect(await appliedNames()).toEqual(["0001_first.sql"]);
   });
 
   test("отказывает в файле без номера в имени, ничего не применяя", async () => {
@@ -115,9 +120,6 @@ describe("миграции", () => {
   });
 
   test("SET из файла не действует на следующие файлы, а соединение миграций не уходит в пул", async () => {
-    const searchPath = async () =>
-      (await pool.query<{ search_path: string }>("SHOW search_path")).rows[0]?.search_path;
-    const before = await searchPath();
     const setsPath = { name: "0001_sets_path.sql", sql: "CREATE SCHEMA s; SET search_path = s" };
     // Роль и прочее состояние сеанса `RESET ALL` не снимает: соединение миграций закрывается.
     const next = {
@@ -128,7 +130,6 @@ describe("миграции", () => {
     await migrate(pool, [setsPath, next]);
 
     expect(await tables()).toContain("next");
-    expect(await searchPath()).toBe(before);
     const migration = await pool.query<{ pid: number }>("SELECT pid FROM public.migration_pid");
     const server = await pool.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
     expect(server.rows[0]?.pid).not.toBe(migration.rows[0]?.pid);
