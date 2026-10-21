@@ -52,6 +52,7 @@ export async function startFakeBotApi({
   const waiting = new Set<() => void>();
   // Метод, который не отвечает, и что сделать, когда его запрос дойдёт.
   const stalled = new Map<string, () => void>();
+  // После `close` ни один запрос не ждёт: иначе сервер ждал бы конца его срока.
   let closed = () => {};
   const closing = new Promise<void>((resolve) => {
     closed = resolve;
@@ -76,14 +77,15 @@ export async function startFakeBotApi({
       };
       const timer = setTimeout(wake, timeoutMs);
       waiting.add(wake);
+      void closing.then(wake);
     });
   }
 
   const app = new Hono();
   // Без keep-alive: соединение, которое ответило уже после `close`, держало бы закрытие секунды.
   app.use(async (c, next) => {
-    await next();
     c.header("Connection", "close");
+    await next();
   });
   app.post("/:bot/:method", async (c) => {
     if (c.req.param("bot") !== `bot${token}`) {
@@ -143,8 +145,6 @@ export async function startFakeBotApi({
       return { arrived, resume: () => stalled.delete(method) };
     },
     close: async () => {
-      // Опрос бота и зависшие запросы отвечают сразу, иначе сервер ждал бы конца их срока.
-      for (const wake of waiting) wake();
       closed();
       await new Promise((resolve) => server.close(resolve));
     },
