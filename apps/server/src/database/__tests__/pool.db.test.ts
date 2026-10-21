@@ -30,15 +30,15 @@ async function terminateAndWait(killer: pg.PoolClient, pid: number | undefined) 
 
 describe("обрыв соединения не роняет процесс, следующий запрос идёт по новому", () => {
   test("простаивающего в пуле", async () => {
-    const idle = await pool.connect();
     const killer = await pool.connect();
-    let pid: number | undefined;
     try {
-      pid = await backendPid(idle);
-    } finally {
-      idle.release();
-    }
-    try {
+      const idle = await pool.connect();
+      let pid: number | undefined;
+      try {
+        pid = await backendPid(idle);
+      } finally {
+        idle.release();
+      }
       await terminateAndWait(killer, pid);
     } finally {
       killer.release();
@@ -49,11 +49,14 @@ describe("обрыв соединения не роняет процесс, сл
 
   test("взятого из пула между запросами", async () => {
     const held = await pool.connect();
-    const killer = await pool.connect();
     try {
-      await terminateAndWait(killer, await backendPid(held));
+      const killer = await pool.connect();
+      try {
+        await terminateAndWait(killer, await backendPid(held));
+      } finally {
+        killer.release();
+      }
     } finally {
-      killer.release();
       held.release(true);
     }
 

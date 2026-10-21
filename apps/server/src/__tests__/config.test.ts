@@ -32,5 +32,6 @@ describe("настройки сервера из окружения", () => {
     expect(() => readConfig({ ...complete, PORT: "70000" })).toThrow(
       "PORT – не номер порта: 70000",
     );
+    expect(() => readConfig({ ...complete, PORT: "1e3" })).toThrow("PORT – не номер порта: 1e3");
   });
 });
