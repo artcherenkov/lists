@@ -13,6 +13,10 @@ const BOT_TOKEN = "e2e-token";
 
 const SERVER_MAIN = fileURLToPath(new URL("../../apps/server/src/main.ts", import.meta.url));
 const START_TIMEOUT_MS = 30_000;
+// Остановка бота ждёт начатый ответ и подтверждение Telegram, до 20 с; дольше – процесс завис.
+const STOP_TIMEOUT_MS = 30_000;
+// Вывод сервера нужен, только если он упал; хвоста хватает для стека ошибки.
+const OUTPUT_LIMIT = 64 * 1024;
 
 export type ApiServer = {
   url: string;
@@ -55,13 +59,22 @@ export async function startApiServer({
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
-  server.stdout.on("data", (chunk) => (output += chunk));
-  server.stderr.on("data", (chunk) => (output += chunk));
+  const collect = (chunk: Buffer) => (output = (output + chunk).slice(-OUTPUT_LIMIT));
+  server.stdout.on("data", collect);
+  server.stderr.on("data", collect);
+  let stopping = false;
+  server.on("exit", (code, signal) => {
+    if (!stopping) console.error(`Сервер e2e упал: код ${code}, сигнал ${signal}\n${output}`);
+  });
 
   const stop = async () => {
-    await stopProcess(server);
-    await telegram.close();
-    await database.drop();
+    stopping = true;
+    try {
+      await stopProcess(server);
+    } finally {
+      await telegram.close();
+      await database.drop();
+    }
   };
 
   try {
@@ -91,10 +104,21 @@ async function waitUntilHealthy(server: ChildProcess, url: string) {
   throw new Error(`проверка здоровья не ответила за ${START_TIMEOUT_MS / 1000} с`);
 }
 
-/** SIGTERM, как Docker: сервер дожидается бота и закрывает пул, иначе база не удалится. */
+/**
+ * SIGTERM, как Docker: сервер дожидается бота и закрывает пул, иначе база не удалится. Зависший
+ * процесс, как и Docker, добивает SIGKILL – и сообщает об этом ошибкой.
+ */
 async function stopProcess(server: ChildProcess) {
   if (server.exitCode !== null || server.signalCode !== null) return;
   const exited = once(server, "exit");
   server.kill("SIGTERM");
+  const timeout = AbortSignal.timeout(STOP_TIMEOUT_MS);
+  const stopped = await Promise.race([
+    exited.then(() => true),
+    once(timeout, "abort").then(() => false),
+  ]);
+  if (stopped) return;
+  server.kill("SIGKILL");
   await exited;
+  throw new Error(`Сервер e2e не остановился за ${STOP_TIMEOUT_MS / 1000} с после SIGTERM`);
 }

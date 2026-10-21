@@ -45,15 +45,19 @@ export async function startAppServer(): Promise<AppServer> {
     url,
     api,
     stop: async () => {
-      await site.close();
-      await api.stop();
+      try {
+        await site.close();
+      } finally {
+        await api.stop();
+      }
     },
   };
 }
 
 /**
  * Сервер, который отдаёт `dist`, а по `switchToNextBuild` – `dist-next` (скрипт `build:next`);
- * `/api/` ведёт на `api`.
+ * `/api/` ведёт на `api`. Адрес у него свой, а `PUBLIC_URL` сервера – адрес сайта воркера, поэтому
+ * сессию по cookie он видит, а вход и выход (`POST`) сервер отклонит по `Origin`.
  */
 export async function startSwitchableAppServer(api: ApiServer): Promise<SwitchableServer> {
   return startSwitchableServer({

@@ -18,6 +18,7 @@ import { createApp } from "../../http/app.ts";
 import { createBotApi } from "../bot-api.ts";
 import { type Bot, startBot } from "../bot.ts";
 import { startFakeBotApi } from "../fake-bot-api.ts";
+import { codeInMessage } from "./code-message.ts";
 
 const TOKEN = "test-token";
 // Сроки в сотни раз короче боевых: зависший запрос обрывается за доли секунды.
@@ -74,7 +75,7 @@ async function waitForAnswers(user: FakeUser, count: number) {
 }
 
 function codeIn(message: string | undefined) {
-  const code = message?.match(/^Код для входа в Lists: (\d{8})$/m)?.[1];
+  const code = message === undefined ? undefined : codeInMessage(message);
   if (!code) throw new Error(`В сообщении нет кода: ${message}`);
   return code;
 }

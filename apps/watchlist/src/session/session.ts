@@ -18,11 +18,13 @@ export const signIn = store.signIn;
 export const signOut = store.signOut;
 
 /**
- * Сверяет вход с сервером в фоне и следит за входом и выходом в других вкладках; вызывается один
- * раз при запуске, после журнала.
+ * Сверяет вход с сервером в фоне – при запуске и когда вернулась сеть – и следит за входом и
+ * выходом в других вкладках; вызывается один раз при запуске, после журнала.
  */
 export function startSession() {
   void store.check();
+  // Без сети сверка при запуске ничего не узнала, а приложение может жить открытым днями.
+  window.addEventListener("online", () => void store.check());
   // `key` – `null`, когда другая вкладка очистила хранилище целиком.
   window.addEventListener("storage", (event) => {
     if (event.key === ACCOUNT_KEY || event.key === null) store.reloadFromStorage();

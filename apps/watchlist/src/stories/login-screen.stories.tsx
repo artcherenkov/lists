@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 
 import { type LoginBot, LoginScreen } from "../screens/login-screen.tsx";
+import { CODE_LENGTH, codeFromInput } from "../session/code-input.ts";
 
 const BOT: LoginBot = { name: "@lists_v2_bot", link: "https://t.me/lists_v2_bot?start=login" };
 
@@ -21,10 +22,10 @@ function LoginScreenDemo({ bot, code: initialCode, checking, problem, onUpdate }
     <LoginScreen
       bot={bot}
       code={code}
-      codeLength={8}
+      codeLength={CODE_LENGTH}
       checking={checking}
       problem={problem}
-      onCodeChange={(input) => setCode(input.replace(/\D/g, "").slice(0, 8))}
+      onCodeChange={(input) => setCode(codeFromInput(input))}
       onSubmit={() => {}}
       onUpdate={onUpdate}
     />

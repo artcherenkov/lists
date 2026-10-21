@@ -60,7 +60,7 @@ test("код из бота впускает, вход переживает пе�
   });
 });
 
-test("неверный код – объяснение на экране, верный после него впускает", async ({
+test("неверный код – объяснение на экране, новый код, вставленный в поле с ним, впускает", async ({
   page,
   server,
   telegramUser,
@@ -73,7 +73,8 @@ test("неверный код – объяснение на экране, вер
     "Код неверный или устарел. Проверьте цифры или получите новый код у бота.",
   );
 
-  await codeField(page).fill(code);
+  await codeField(page).press("End");
+  await page.keyboard.insertText(code);
   await expect(profileButton(page)).toBeVisible();
 });
 
@@ -176,5 +177,25 @@ test.describe("без связи", () => {
       await codeField(page).fill(`${code.slice(0, 4)} ${code.slice(4)}`);
       await expect(profileButton(page)).toBeVisible();
     });
+  });
+
+  test("сессия кончилась, пока не было сети: когда связь вернулась, приложение показывает экран входа", async ({
+    page,
+    context,
+    server,
+    telegramUser,
+  }) => {
+    await page.goto("/");
+    await codeField(page).fill(await codeFromBot(server.api, telegramUser));
+    await expect(profileButton(page)).toBeVisible();
+    await waitForServiceWorker(page);
+
+    await context.setOffline(true);
+    await context.clearCookies();
+    await page.reload();
+    await expect(profileButton(page)).toBeVisible();
+
+    await context.setOffline(false);
+    await expect(botLink(page)).toBeVisible();
   });
 });

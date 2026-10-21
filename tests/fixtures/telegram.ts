@@ -3,7 +3,8 @@ import type { ApiServer } from "./api-server.ts";
 import type { AppServer } from "./server.ts";
 import type { BrowserContext } from "@playwright/test";
 
-const CODE_MESSAGE = /^Код для входа в Lists: (\d{8})$/m;
+import { codeInMessage } from "../../apps/server/src/telegram/__tests__/code-message.ts";
+
 const BOT_ANSWER_TIMEOUT_MS = 10_000;
 
 let lastTelegramId = 0;
@@ -21,7 +22,7 @@ export async function codeFromBot(api: ApiServer, user: FakeUser): Promise<strin
   const deadline = Date.now() + BOT_ANSWER_TIMEOUT_MS;
   while (Date.now() < deadline) {
     for (const message of api.telegram.sentTo(user.id).slice(answeredBefore)) {
-      const code = CODE_MESSAGE.exec(message)?.[1];
+      const code = codeInMessage(message);
       if (code) return code;
     }
     await new Promise((resolve) => setTimeout(resolve, 25));

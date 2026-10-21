@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { type LoginBot, LoginScreen } from "./screens/login-screen.tsx";
+import { CODE_LENGTH, codeFromInput } from "./session/code-input.ts";
 import { loadBotUsername, signIn, type SignInResult } from "./session/session.ts";
-
-// Длина кода – договорённость с сервером (решение 2 вехи 6, `apps/server/src/auth/telegram-code.ts`):
-// полный код поле отправляет само, и только с ним включается «Войти». Расхождение с сервером
-// роняет e2e входа: код из бота не впустит.
-const CODE_LENGTH = 8;
 // Пока сервер не назвал бота, имя запрашивается снова: сервер мог перезапускаться, а событие
 // `online` приходит, только когда пропадала сама сеть устройства.
 const BOT_RETRY_MS = 5000;
@@ -36,10 +32,16 @@ function useLoginBot(): LoginBot {
   useEffect(() => {
     let stopped = false;
     let loading = false;
+    // Сеть вернулась, пока шёл прежний запрос: если он не удался, следующий – сразу.
+    let retryAtOnce = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
-      if (loading) return;
+      if (loading) {
+        retryAtOnce = true;
+        return;
+      }
       loading = true;
+      retryAtOnce = false;
       clearTimeout(retry);
       const username = await loadBotUsername();
       loading = false;
@@ -50,7 +52,7 @@ function useLoginBot(): LoginBot {
         return;
       }
       setBot("unavailable");
-      retry = setTimeout(load, BOT_RETRY_MS);
+      retry = setTimeout(load, retryAtOnce ? 0 : BOT_RETRY_MS);
     };
     void load();
     window.addEventListener("online", load);
@@ -88,8 +90,7 @@ export function ConnectedLoginScreen({ onUpdate }: { onUpdate: (() => void) | un
       checking={checking}
       problem={problem}
       onCodeChange={(input) => {
-        // Из Telegram код копируется с пробелом или вместе с текстом сообщения: берём цифры.
-        const digits = input.replace(/\D/g, "").slice(0, CODE_LENGTH);
+        const digits = codeFromInput(input);
         // Тот же код после отказа – новая попытка: человек вставил его снова, когда вернулась связь.
         if (digits === code && !problem) return;
         setCode(digits);
