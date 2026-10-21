@@ -86,8 +86,8 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
         const { message } = error as Error;
         throw new Error(`Миграция ${file.name} не применилась: ${message}`, { cause: error });
       }
-      // Сразу после файла: его `SET` не действует ни на служебные запросы запуска, ни на следующие
-      // файлы.
+      // Сразу после файла: его `SET` параметров не действует ни на служебные запросы запуска, ни на
+      // следующие файлы.
       await client.query("RESET ALL");
       await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
         file.name,
