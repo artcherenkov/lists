@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "docker compose up --detach --wait postgres && turbo dev",
+    "dev": "docker compose up --detach --wait postgres && turbo dev --ui=tui",
     "build": "turbo build",
     "test": "pnpm test:unit && pnpm test:db && pnpm test:e2e",
     "check-types": "turbo check-types && tsc --project tsconfig.tests.json",

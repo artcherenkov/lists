@@ -2,7 +2,7 @@ import { getMigrations } from "better-auth/db/migration";
 import process from "node:process";
 
 import preparePostgres from "../src/__tests__/prepare-postgres.ts";
-import { TEST_AUTH_CONFIG } from "../src/__tests__/test-config.ts";
+import { IGNORED_EVENTS, TEST_AUTH_CONFIG } from "../src/__tests__/test-config.ts";
 import { createTestDatabase } from "../src/__tests__/test-database.ts";
 import { authOptions } from "../src/auth/auth.ts";
 import { checkNewMigrationName, writeMigration } from "../src/database/migration-files.ts";
@@ -32,7 +32,11 @@ try {
 await preparePostgres();
 const database = await createTestDatabase();
 try {
-  const options = authOptions({ pool: database.pool, config: TEST_AUTH_CONFIG });
+  const options = authOptions({
+    pool: database.pool,
+    config: TEST_AUTH_CONFIG,
+    events: IGNORED_EVENTS,
+  });
   const plan = await getMigrations(options);
   const nothingToAdd =
     plan.toBeCreated.length + plan.toBeAdded.length + plan.toBeAddedIndexes.length === 0;

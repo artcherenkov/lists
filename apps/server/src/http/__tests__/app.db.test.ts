@@ -4,7 +4,7 @@ import type pg from "pg";
 
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import { TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
+import { IGNORED_EVENTS, TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { createAuth } from "../../auth/auth.ts";
 import { createPool } from "../../database/pool.ts";
@@ -18,7 +18,7 @@ describe("HTTP-слой на базе с миграциями", () => {
   beforeAll(async () => {
     const database = await createTestDatabase();
     pool = database.pool;
-    auth = createAuth({ pool, config });
+    auth = createAuth({ pool, config, events: IGNORED_EVENTS });
     app = createApp({ auth, pool });
     return database.drop;
   });
