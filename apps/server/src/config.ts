@@ -29,9 +29,10 @@ export function readConfig(env: NodeJS.ProcessEnv): ServerConfig {
   const value = (name: string) => env[name] ?? "";
 
   // Только цифры: Number() принял бы и `1e3`, и `0xD48`.
-  const port = /^\d+$/.test(value(VARIABLES.port)) ? Number(value(VARIABLES.port)) : Number.NaN;
-  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-    throw new Error(`PORT – не номер порта: ${value(VARIABLES.port)}`);
+  const rawPort = value(VARIABLES.port);
+  const port = Number(rawPort);
+  if (!/^\d+$/.test(rawPort) || port < 1 || port > 65535) {
+    throw new Error(`PORT – не номер порта: ${rawPort}`);
   }
   return {
     databaseUrl: value(VARIABLES.databaseUrl),

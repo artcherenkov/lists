@@ -19,6 +19,8 @@ const ABANDONED_AFTER_MS = 60 * 60 * 1000;
 
 export interface TestDatabase {
   pool: pg.Pool;
+  /** Адрес базы – для соединения мимо пула. */
+  url: string;
   drop: () => Promise<void>;
 }
 
@@ -45,7 +47,7 @@ export async function createTestDatabase({ migrated = true } = {}): Promise<Test
       throw error;
     }
   }
-  return { pool, drop };
+  return { pool, url: url.href, drop };
 }
 
 /** Запуск, убитый до конца тестов, оставляет базу. Удаляет свои базы старше часа без подключений. */
