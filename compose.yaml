@@ -1,0 +1,25 @@
+# Стек разработки: Postgres для `pnpm dev` и тестов сервера. Имя проекта задано явно, поэтому все
+# worktree делят одну базу разработки. Порт только на 127.0.0.1: 5432 на devbox занят другим проектом.
+name: lists
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_USER: lists
+      POSTGRES_PASSWORD: lists
+      POSTGRES_DB: lists
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "lists", "-d", "lists"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+      # Первый запуск на пустом томе создаёт базу; неудачные проверки в это время не в счёт.
+      start_period: 60s
+
+volumes:
+  postgres-data:

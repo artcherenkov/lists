@@ -59,10 +59,11 @@ devbox:
 ## Команды
 
 - `pnpm install` – зависимости. Новые ставит только `pnpm add` (`-w` для корня, `--filter <пакет>` для пакета): `package.json` и `pnpm-lock.yaml` руками не правим. Политику минимального возраста релиза pnpm не ослабляем: если свежая версия пакета требует исключения в `pnpm-workspace.yaml`, берём последнюю созревшую.
-- `pnpm dev` – Watchlist на `http://localhost:5175`.
+- `pnpm dev` – Postgres стека разработки (`compose.yaml`, `127.0.0.1:5440`), сервер на `127.0.0.1:3400` и Watchlist на `http://localhost:5175`; `/api` Vite ведёт на сервер. Окружение сервера в разработке – `apps/server/dev.env`, секретов в нём нет. База разработки одна на все worktree: если сервер разработки не стартует из-за миграций другой ветки, сбрось её `docker compose down -v` в корне.
 - `pnpm storybook` – Storybook на `http://localhost:6006`.
-- `pnpm check` – все проверки: `fmt:check`, `lint` (oxlint и `shellcheck` по `deploy/*.sh` и `deploy/ingress/*.sh`), `check-types`, сборка Storybook, unit и e2e. Перед слиянием запускай с `TURBO_FORCE=true`. Хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types` и unit, без сборки Storybook и e2e.
-- `pnpm test:unit` – Vitest. `pnpm test:e2e` – сборка приложения и Playwright на ней.
+- `pnpm check` – все проверки: `fmt:check`, `lint` (oxlint и `shellcheck` по `deploy/*.sh` и `deploy/ingress/*.sh`), `check-types`, сборка Storybook, unit, db и e2e. Перед слиянием запускай с `TURBO_FORCE=true`. Хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types` и unit, без сборки Storybook и e2e.
+- `pnpm test:unit` – Vitest без базы. `pnpm test:db` – тесты сервера на Postgres, поднимает его сам. `pnpm test:e2e` – сборка приложения и Playwright на ней.
+- `pnpm --filter server auth:sql` – SQL, которого после наших миграций не хватает таблицам better-auth: после обновления better-auth или правки полей плагина входа он ложится следующей миграцией в `apps/server/src/migrations`.
 - `pnpm deploy:v2 [коммит]` – выкладка коммита (по умолчанию `HEAD`) на `https://v2.watchlist.acherenkov.com`. На `lists` выкладываем только ею. `pnpm rollback:v2` – откат на прежний релиз, повторный откат отменяет первый. Устройство сервера, проверки и защиты выкладки, блокировка, прерывание, журнал выкладки, удаление старых релизов и ручные действия на сервере – в [deploy/README.md](deploy/README.md).
 - `pnpm fmt` – форматирование oxfmt. Из него исключены сгенерированное (`packages/ui/src/components/ui/**`, `pnpm-lock.yaml`) и документы, которые ведутся вручную: `docs/plan.md`, `docs/tasks/**`, `.claude/**`.
 - Компоненты shadcn, пресет и Storybook – в [docs/ui.md](docs/ui.md): прочитай перед работой с интерфейсом.
