@@ -31,11 +31,11 @@ const MIGRATION_LOCK = 6_000_001;
  * выкладки базу не трогает (решение 9 вехи 6). Типичные нарушения ловит тест
  * `__tests__/migrations-only-add.db.test.ts`, правило целиком проверяет ревью миграции.
  *
- * Файл не управляет транзакцией: он выполняется через `EXECUTE` в plpgsql, и `BEGIN`, `COMMIT`,
- * `ROLLBACK` или `END` в нём Postgres отклоняет ошибкой «EXECUTE of transaction commands is not
- * implemented». Состояние сеанса следующим файлам файл не оставляет: `SET` параметров вроде
- * `search_path` после него снимает `RESET ALL`, а роль, режим транзакции и временные таблицы
- * `RESET ALL` не снимает – их в миграциях не используем.
+ * Файл не начинает и не завершает транзакцию: он выполняется через `EXECUTE` в plpgsql, и `BEGIN`,
+ * `COMMIT`, `ROLLBACK` или `END` в нём Postgres отклоняет сам. Состояние сеанса следующим файлам
+ * файл не оставляет: `SET` параметров вроде `search_path` после него снимает `RESET ALL`, а роль,
+ * режим транзакции (`SET TRANSACTION`) и временные таблицы `RESET ALL` не снимает – их в миграциях
+ * не используем.
  *
  * Применённый файл не меняют и не удаляют, в том числе через `git revert`, даже комментарий:
  * сверка идёт по сумме всего файла. Ошибку исправляет новый файл.
@@ -70,18 +70,15 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
       }
     }
 
-    const pending = files.slice(common);
-    if (pending.length > 0) {
+    const applied: string[] = [];
+    for (const file of files.slice(common)) {
       // `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию и сняли блокировку: следующие
       // файлы шли бы без них, а упавший файл оставил бы базу наполовину. В `EXECUTE` их в любом
-      // написании не принимает сам Postgres.
-      await client.query(`CREATE FUNCTION pg_temp.run_migration(sql text) RETURNS void
-        LANGUAGE plpgsql AS $$ BEGIN EXECUTE sql; END $$`);
-    }
-    const applied: string[] = [];
-    for (const file of pending) {
+      // написании не принимает сам Postgres. Параметров `DO` не принимает, поэтому текст файла
+      // приходит в него через настройку, которая живёт до конца транзакции.
+      await client.query("SELECT set_config('lists.migration', $1, true)", [file.sql]);
       try {
-        await client.query("SELECT pg_temp.run_migration($1)", [file.sql]);
+        await client.query("DO $$ BEGIN EXECUTE current_setting('lists.migration'); END $$");
       } catch (error) {
         // pg бросает только Error.
         const { message } = error as Error;
