@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { checkNewMigrationName, readMigrations } from "../migration-files.ts";
+import { checkNewMigrationName } from "../migration-files.ts";
 
 // Идёт по настоящему каталогу миграций: в нём всегда есть применённый 0001_auth.sql.
 describe("имя новой миграции", () => {
@@ -14,11 +14,9 @@ describe("имя новой миграции", () => {
     );
   });
 
-  test("номер последнего файла – отказ, хотя имя идёт после него", async () => {
-    const lastNumber = (await readMigrations()).at(-1)?.name.slice(0, 4);
-
-    await expect(checkNewMigrationName(`${lastNumber}_zzz.sql`)).rejects.toThrow(
-      `Номер миграции повторяется: ${lastNumber}`,
+  test("занятый номер – отказ, даже если имя идёт после занятого", async () => {
+    await expect(checkNewMigrationName("0001_zzz.sql")).rejects.toThrow(
+      "Номер миграции повторяется: 0001",
     );
   });
 });

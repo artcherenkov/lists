@@ -80,19 +80,29 @@ describe("миграции", () => {
     expect(await tables()).not.toContain("third");
   });
 
-  test("отказывает в файле, который сам завершил транзакцию, хотя часть запуска уже закреплена", async () => {
-    // `BEGIN` после `COMMIT` открывает новую транзакцию: её отказ тоже замечает.
+  test("отказывает в файлах, которые сами завершают транзакцию, ничего не применяя", async () => {
     const commits = {
       name: "0002_commits.sql",
-      sql: "CREATE TABLE commits (id int); COMMIT; BEGIN",
+      sql: "BEGIN;\nCREATE TABLE commits (id int);\nCOMMIT;",
     };
-    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
+    const rollsBack = { name: "0003_rolls_back.sql", sql: "CREATE TABLE back (id int); ROLLBACK" };
 
-    await expect(migrate(pool, [first, commits, third])).rejects.toThrow(
-      "Миграция 0002_commits.sql сама завершила транзакцию",
+    await expect(migrate(pool, [first, commits, rollsBack])).rejects.toThrow(
+      "Миграция сама завершает транзакцию – уберите COMMIT и ROLLBACK: 0002_commits.sql, 0003_rolls_back.sql",
     );
-    expect(await tables()).toEqual(["commits", "first", "schema_migrations"]);
-    expect(await appliedNames()).toEqual(["0001_first.sql"]);
+    expect(await tables()).toEqual([]);
+  });
+
+  test("COMMIT внутри имени или строки – не завершение транзакции", async () => {
+    const lookalike = {
+      name: "0002_lookalike.sql",
+      sql: "CREATE TABLE commit_log (id int); COMMENT ON TABLE commit_log IS 'rollback не нужен'",
+    };
+
+    expect((await migrate(pool, [first, lookalike])).applied).toEqual([
+      "0001_first.sql",
+      "0002_lookalike.sql",
+    ]);
   });
 
   test("отказывает в файле без номера в имени, ничего не применяя", async () => {
@@ -119,20 +129,21 @@ describe("миграции", () => {
     expect(await migrate(pool, [first])).toEqual({ applied: [], unknown: ["0002_second.sql"] });
   });
 
-  test("SET из файла не действует на следующие файлы, а соединение миграций не уходит в пул", async () => {
+  test("SET из файла не действует на следующие файлы, а состояние сеанса миграций – на запросы сервера", async () => {
     const setsPath = { name: "0001_sets_path.sql", sql: "CREATE SCHEMA s; SET search_path = s" };
-    // Роль и прочее состояние сеанса `RESET ALL` не снимает: соединение миграций закрывается.
+    // Временную таблицу, как и роль, `RESET ALL` не снимает.
     const next = {
       name: "0002_next.sql",
-      sql: "CREATE TABLE next (id int); CREATE TABLE public.migration_pid AS SELECT pg_backend_pid() AS pid",
+      sql: "CREATE TABLE next (id int); CREATE TEMP TABLE leaked (id int)",
     };
 
     await migrate(pool, [setsPath, next]);
 
     expect(await tables()).toContain("next");
-    const migration = await pool.query<{ pid: number }>("SELECT pid FROM public.migration_pid");
-    const server = await pool.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
-    expect(server.rows[0]?.pid).not.toBe(migration.rows[0]?.pid);
+    const leaked = await pool.query<{ table: string | null }>(
+      "SELECT to_regclass('pg_temp.leaked')::text AS table",
+    );
+    expect(leaked.rows[0]?.table).toBeNull();
   });
 
   test("два одновременных запуска применяют файл один раз", async () => {

@@ -11,6 +11,10 @@ export interface MigrationResult {
   unknown: string[];
 }
 
+// `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию и сняли блокировку: следующие
+// файлы шли бы без них, а упавший файл оставил бы базу наполовину.
+const TRANSACTION_END = /(^|;)\s*(COMMIT|ROLLBACK|ABORT)\b/im;
+
 // Номер блокировки миграций; любой постоянный, лишь бы не совпал с другими блокировками сервера.
 const MIGRATION_LOCK = 6_000_001;
 
@@ -31,22 +35,27 @@ const MIGRATION_LOCK = 6_000_001;
  * выкладки базу не трогает (решение 9 вехи 6). Типичные нарушения ловит тест
  * `__tests__/migrations-only-add.db.test.ts`, правило целиком проверяет ревью миграции.
  *
- * Файл не управляет транзакцией и сеансом: в нём нет `BEGIN`, `COMMIT`, `ROLLBACK`, `SET ROLE`
- * и временных таблиц, иначе он влиял бы на следующие файлы запуска. Настройки из `SET` после
- * файла сбрасываются. `COMMIT` и `ROLLBACK` запуск замечает, но уже после того, как часть запуска
- * закреплена в базе, поэтому такой файл должны поймать тесты на пустой базе.
+ * Файл не завершает транзакцию: `COMMIT`, `ROLLBACK` и `ABORT` в начале оператора запуск
+ * отклоняет до применения. И не оставляет следующим файлам состояния сеанса: `SET` параметров
+ * вроде `search_path` после файла снимает `RESET ALL`, а роль, `SET TRANSACTION` и временные
+ * таблицы – нет, их в миграциях не используем.
  *
  * Применённый файл не меняют и не удаляют, в том числе через `git revert`, даже комментарий:
  * сверка идёт по сумме всего файла. Ошибку исправляет новый файл.
  */
 export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<MigrationResult> {
   checkMigrationNames(migrations.map((file) => file.name));
+  const ending = migrations.filter((file) => TRANSACTION_END.test(file.sql));
+  if (ending.length > 0) {
+    throw new Error(
+      `Миграция сама завершает транзакцию – уберите COMMIT и ROLLBACK: ${ending.map((file) => file.name).join(", ")}`,
+    );
+  }
   const files = [...migrations].sort((a, b) => (a.name < b.name ? -1 : 1));
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock($1)", [MIGRATION_LOCK]);
-    const transaction = await currentTransaction(client);
     await client.query(`CREATE TABLE IF NOT EXISTS public.schema_migrations (
       name text PRIMARY KEY,
       sha256 text NOT NULL,
@@ -73,13 +82,7 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
     const applied: string[] = [];
     for (const file of files.slice(common)) {
       await client.query(file.sql);
-      // Сразу после файла: его `SET` не действует ни на запросы запуска, ни на следующие файлы.
       await client.query("RESET ALL");
-      if ((await currentTransaction(client)) !== transaction) {
-        throw new Error(
-          `Миграция ${file.name} сама завершила транзакцию, и часть запуска уже закреплена в базе: уберите COMMIT и ROLLBACK из файла`,
-        );
-      }
       await client.query("INSERT INTO public.schema_migrations (name, sha256) VALUES ($1, $2)", [
         file.name,
         sha256Of(file.sql),
@@ -89,16 +92,12 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
     await client.query("COMMIT");
     return { applied, unknown: appliedBefore.slice(common).map((row) => row.name) };
   } finally {
-    // Соединение закрывается всегда: состояние сеанса из миграции, которое `RESET ALL` не снимает,
-    // не уйдёт с ним в запросы сервера. Без COMMIT Postgres при закрытии сам откатывает транзакцию и снимает
-    // блокировку; отдельный ROLLBACK на оборванном соединении упал бы и скрыл исходную ошибку.
+    // Соединение закрывается всегда: состояние сеанса из миграции, которое не снимает `RESET ALL`,
+    // не уйдёт с ним в запросы сервера. Без COMMIT Postgres при закрытии сам откатывает
+    // транзакцию и снимает блокировку; отдельный ROLLBACK на оборванном соединении упал бы и скрыл
+    // исходную ошибку.
     client.release(true);
   }
-}
-
-async function currentTransaction(client: pg.PoolClient) {
-  const result = await client.query<{ id: string }>("SELECT pg_current_xact_id()::text AS id");
-  return result.rows[0]?.id;
 }
 
 function sha256Of(sql: string) {
