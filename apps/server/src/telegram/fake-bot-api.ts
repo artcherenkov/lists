@@ -1,5 +1,4 @@
 import type { Message, Update } from "./bot-api.ts";
-import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import { serve } from "@hono/node-server";
@@ -81,6 +80,11 @@ export async function startFakeBotApi({
   }
 
   const app = new Hono();
+  // Без keep-alive: соединение, которое ответило уже после `close`, держало бы закрытие секунды.
+  app.use(async (c, next) => {
+    await next();
+    c.header("Connection", "close");
+  });
   app.post("/:bot/:method", async (c) => {
     if (c.req.param("bot") !== `bot${token}`) {
       return c.json({ ok: false, description: "Unauthorized" }, 401);
@@ -142,11 +146,7 @@ export async function startFakeBotApi({
       // Опрос бота и зависшие запросы отвечают сразу, иначе сервер ждал бы конца их срока.
       for (const wake of waiting) wake();
       closed();
-      const serverClosed = new Promise((resolve) => server.close(resolve));
-      // Соединения, которые клиент держит открытыми, продержали бы закрытие секунды. `serve` без
-      // своего `createServer` поднимает `http.Server`.
-      (server as Server).closeAllConnections();
-      await serverClosed;
+      await new Promise((resolve) => server.close(resolve));
     },
   };
 }
