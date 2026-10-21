@@ -173,7 +173,8 @@ test("повторно доставленный /start остаётся без �
 
 test("остановка посреди пачки: разобранное подтверждено, остаток придёт после перезапуска", async () => {
   await startFakeTelegram();
-  const first = await startTestBot();
+  // Срок отправки бот отсчитывает ещё до того, как запрос дошёл до подделки: запас на медленную машину.
+  const first = await startTestBot({ ...TIMING, responseGraceMs: 2000 });
   const anna = newUser();
   const boris = newUser("Борис");
   const errors = silenceErrors();

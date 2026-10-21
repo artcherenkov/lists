@@ -1,4 +1,5 @@
 import type { Message, Update } from "./bot-api.ts";
+import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import { serve } from "@hono/node-server";
@@ -141,7 +142,11 @@ export async function startFakeBotApi({
       // Опрос бота и зависшие запросы отвечают сразу, иначе сервер ждал бы конца их срока.
       for (const wake of waiting) wake();
       closed();
-      await new Promise((resolve) => server.close(resolve));
+      const serverClosed = new Promise((resolve) => server.close(resolve));
+      // Соединения, которые клиент держит открытыми, продержали бы закрытие секунды. `serve` без
+      // своего `createServer` поднимает `http.Server`.
+      (server as Server).closeAllConnections();
+      await serverClosed;
     },
   };
 }
