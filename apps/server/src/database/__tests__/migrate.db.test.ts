@@ -84,7 +84,8 @@ describe("миграции", () => {
 
   test.each([
     "CREATE TABLE ends (id int);\nEND;",
-    "BEGIN;\nCREATE TABLE ends (id int);\ncommit;",
+    "BEGIN;\nCREATE TABLE ends (id int);",
+    "CREATE TABLE ends (id int);\ncommit;",
     "CREATE TABLE ends (id int); /* готово */ COMMIT",
     "CREATE TABLE ends (id int); ROLLBACK",
     "CREATE TABLE ends (id int); ABORT",
