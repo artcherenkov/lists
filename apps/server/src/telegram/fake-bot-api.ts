@@ -24,10 +24,10 @@ export interface FakeBotApi {
   /** Что бот прислал в чат, по порядку, – как это покажет Telegram. */
   sentTo(chatId: number): string[];
   /**
-   * Запросы метода остаются без ответа, как через зависший прокси, пока не вызвана возвращённая
-   * функция; уже зависшие ответа не получат.
+   * Запросы метода остаются без ответа, как через зависший прокси, пока не вызван `resume`; уже
+   * зависшие ответа не получат. `arrived` – первый такой запрос дошёл до подделки.
    */
-  stall(method: "getUpdates" | "sendMessage"): () => void;
+  stall(method: "getUpdates" | "sendMessage"): { arrived: Promise<void>; resume(): void };
   close(): Promise<void>;
 }
 
@@ -50,7 +50,8 @@ export async function startFakeBotApi({
   const updates: Update[] = [];
   const sent: { chatId: number; text: string }[] = [];
   const waiting = new Set<() => void>();
-  const stalled = new Set<string>();
+  // Метод, который не отвечает, и что сделать, когда его запрос дойдёт.
+  const stalled = new Map<string, () => void>();
   let closed = () => {};
   const closing = new Promise<void>((resolve) => {
     closed = resolve;
@@ -85,7 +86,9 @@ export async function startFakeBotApi({
     }
     const params = await c.req.json();
     const method = c.req.param("method");
-    if (stalled.has(method)) {
+    const onStalled = stalled.get(method);
+    if (onStalled) {
+      onStalled();
       await closing;
       return c.json({ ok: false, description: "Closed" }, 503);
     }
@@ -131,8 +134,8 @@ export async function startFakeBotApi({
     sendUpdate: push,
     sentTo: (chatId) => sent.filter((message) => message.chatId === chatId).map((m) => m.text),
     stall: (method) => {
-      stalled.add(method);
-      return () => stalled.delete(method);
+      const arrived = new Promise<void>((resolve) => stalled.set(method, resolve));
+      return { arrived, resume: () => stalled.delete(method) };
     },
     close: async () => {
       // Опрос бота и зависшие запросы отвечают сразу, иначе сервер ждал бы конца их срока.

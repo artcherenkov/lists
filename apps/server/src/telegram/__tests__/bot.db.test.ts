@@ -83,13 +83,6 @@ function signIn(code: string) {
   });
 }
 
-async function liveCodes(user: FakeUser) {
-  const codes = await pool.query('SELECT 1 FROM auth."telegramCode" WHERE "telegramId" = $1', [
-    String(user.id),
-  ]);
-  return codes.rowCount;
-}
-
 function silenceErrors() {
   return vi.spyOn(console, "error").mockImplementation(() => {});
 }
@@ -180,19 +173,18 @@ test("повторно доставленный /start остаётся без �
 
 test("остановка посреди пачки: разобранное подтверждено, остаток придёт после перезапуска", async () => {
   await startFakeTelegram();
-  // Срок отправки с запасом: остановка должна прийти, пока отправка Анне ещё висит.
-  const first = await startTestBot({ ...TIMING, responseGraceMs: 2000 });
+  const first = await startTestBot();
   const anna = newUser();
   const boris = newUser("Борис");
   const errors = silenceErrors();
   try {
-    // Отправка кода Анне висит, пока сервер останавливается; `/start` Бориса – в той же пачке.
-    const resume = fake.stall("sendMessage");
+    // Сервер останавливается, пока висит отправка кода Анне; `/start` Бориса – в той же пачке.
+    const sending = fake.stall("sendMessage");
     fake.send(anna, "/start");
     fake.send(boris, "/start");
-    await vi.waitFor(async () => expect(await liveCodes(anna)).toBe(1), SLOW);
+    await sending.arrived;
     await first.stop();
-    resume();
+    sending.resume();
   } finally {
     errors.mockRestore();
   }
@@ -209,7 +201,7 @@ test("зависший опрос обрывается по сроку, и бо�
   await startFakeTelegram();
   const errors = silenceErrors();
   try {
-    const resume = fake.stall("getUpdates");
+    const polling = fake.stall("getUpdates");
     await startTestBot();
     await vi.waitFor(
       () =>
@@ -220,7 +212,7 @@ test("зависший опрос обрывается по сроку, и бо�
       SLOW,
     );
 
-    resume();
+    polling.resume();
     const anna = newUser();
     fake.send(anna, "/start");
     await waitForAnswers(anna, 1);
@@ -234,7 +226,7 @@ test("зависшая отправка обрывается по сроку и 
   await startTestBot();
   const errors = silenceErrors();
   try {
-    const resume = fake.stall("sendMessage");
+    const sending = fake.stall("sendMessage");
     fake.send(newUser(), "/start");
     await vi.waitFor(
       () =>
@@ -245,7 +237,7 @@ test("зависшая отправка обрывается по сроку и 
       SLOW,
     );
 
-    resume();
+    sending.resume();
     const boris = newUser("Борис");
     fake.send(boris, "/start");
     await waitForAnswers(boris, 1);
