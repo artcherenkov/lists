@@ -11,7 +11,19 @@ export interface ServerConfig {
   publicUrl: string;
   host: string;
   port: number;
+  /** Токен бота от BotFather. */
+  telegramBotToken: string;
+  /** Адрес Bot API: в бою – `https://api.telegram.org`, в разработке и тестах – подделка. */
+  telegramApiUrl: string;
+  /** id Telegram владельца: ему бот пишет о подборе кодов. */
+  telegramOwnerId: string;
 }
+
+/** Bot API Telegram; другой адрес вне разработки и тестов – ошибка настройки (решение 11 вехи 6). */
+export const TELEGRAM_API_URL = "https://api.telegram.org";
+
+// Разработку и тесты называют явно: забытый или опечатанный `NODE_ENV` на сервере – боевая работа.
+const FAKE_BOT_API_ENVIRONMENTS = ["development", "test"];
 
 const VARIABLES = {
   databaseUrl: "DATABASE_URL",
@@ -19,6 +31,9 @@ const VARIABLES = {
   publicUrl: "PUBLIC_URL",
   host: "HOST",
   port: "PORT",
+  telegramBotToken: "TELEGRAM_BOT_TOKEN",
+  telegramApiUrl: "TELEGRAM_API_URL",
+  telegramOwnerId: "TELEGRAM_OWNER_ID",
 } as const;
 
 export function readConfig(env: NodeJS.ProcessEnv): ServerConfig {
@@ -34,11 +49,27 @@ export function readConfig(env: NodeJS.ProcessEnv): ServerConfig {
   if (!/^\d+$/.test(rawPort) || port < 1 || port > 65535) {
     throw new Error(`PORT – не номер порта: ${rawPort}`);
   }
+  // Подделка Bot API впускает под любым id Telegram: на сервере ей не место.
+  const telegramApiUrl = value(VARIABLES.telegramApiUrl);
+  const fakeAllowed = FAKE_BOT_API_ENVIRONMENTS.includes(env.NODE_ENV ?? "");
+  if (!fakeAllowed && telegramApiUrl !== TELEGRAM_API_URL) {
+    throw new Error(
+      `TELEGRAM_API_URL – только ${TELEGRAM_API_URL}, если NODE_ENV не development и не test`,
+    );
+  }
+  // Ошибка в id владельца иначе всплыла бы только на оповещении о подборе, и оно бы не ушло.
+  const telegramOwnerId = value(VARIABLES.telegramOwnerId);
+  if (!/^\d+$/.test(telegramOwnerId)) {
+    throw new Error(`TELEGRAM_OWNER_ID – не id Telegram: ${telegramOwnerId}`);
+  }
   return {
     databaseUrl: value(VARIABLES.databaseUrl),
     authSecret: value(VARIABLES.authSecret),
     publicUrl: value(VARIABLES.publicUrl),
     host: value(VARIABLES.host),
     port,
+    telegramBotToken: value(VARIABLES.telegramBotToken),
+    telegramApiUrl,
+    telegramOwnerId,
   };
 }

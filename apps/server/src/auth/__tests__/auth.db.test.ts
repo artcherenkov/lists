@@ -3,7 +3,7 @@ import type pg from "pg";
 
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
+import { IGNORED_EVENTS, TEST_AUTH_CONFIG as config } from "../../__tests__/test-config.ts";
 import { createTestDatabase } from "../../__tests__/test-database.ts";
 import { checkAuthSchema, createAuth } from "../auth.ts";
 
@@ -14,7 +14,7 @@ describe("вход на базе с миграциями", () => {
   beforeAll(async () => {
     const database = await createTestDatabase();
     pool = database.pool;
-    auth = createAuth({ pool, config });
+    auth = createAuth({ pool, config, events: IGNORED_EVENTS });
     return database.drop;
   });
 
@@ -27,6 +27,7 @@ describe("вход на базе с миграциями", () => {
     const production = createAuth({
       pool,
       config: { ...config, publicUrl: "https://lists.example" },
+      events: IGNORED_EVENTS,
     });
     const context = await production.$context;
 
@@ -75,7 +76,7 @@ describe("запуск сервера", () => {
   test("на базе без таблиц входа сверка схемы отказывает", async () => {
     const database = await createTestDatabase({ migrated: false });
     try {
-      const auth = createAuth({ pool: database.pool, config });
+      const auth = createAuth({ pool: database.pool, config, events: IGNORED_EVENTS });
 
       await expect(checkAuthSchema(auth)).rejects.toThrow("Database schema mismatch");
     } finally {

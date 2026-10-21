@@ -5,6 +5,8 @@ import type pg from "pg";
 import { betterAuth } from "better-auth";
 import { PostgresDialect } from "kysely";
 
+import { type TelegramLoginEvents, telegramLogin } from "./telegram-login.ts";
+
 /** Где better-auth принимает запросы; какие маршруты открыты снаружи, решает `http/app.ts`. */
 export const AUTH_BASE_PATH = "/api/auth";
 
@@ -13,11 +15,18 @@ const YEAR_SECONDS = 365 * 24 * 60 * 60;
 /** Настройки сервера, которые нужны входу. */
 export type AuthConfig = Pick<ServerConfig, "publicUrl" | "authSecret">;
 
+export interface AuthDependencies {
+  pool: pg.Pool;
+  config: AuthConfig;
+  /** Куда вход сообщает о входах и подборе кодов: в боевой работе – бот. */
+  events: TelegramLoginEvents;
+}
+
 /**
  * Настройки better-auth (решения 5 и 13 плана, решения 3–5 вехи 6). Отдельно от `createAuth`,
  * потому что по ним же `scripts/auth-sql.ts` пишет миграцию таблиц входа.
  */
-export function authOptions({ pool, config }: { pool: pg.Pool; config: AuthConfig }) {
+export function authOptions({ pool, config, events }: AuthDependencies) {
   return {
     appName: "Lists",
     baseURL: config.publicUrl,
@@ -30,6 +39,7 @@ export function authOptions({ pool, config }: { pool: pg.Pool; config: AuthConfi
       schemaName: "auth",
       transaction: true,
     },
+    plugins: [telegramLogin({ events })],
     session: {
       // По умолчанию 7 дней: неделя без приложения выкидывала бы человека.
       expiresIn: YEAR_SECONDS,
@@ -53,7 +63,7 @@ export function authOptions({ pool, config }: { pool: pg.Pool; config: AuthConfi
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(dependencies: { pool: pg.Pool; config: AuthConfig }) {
+export function createAuth(dependencies: AuthDependencies) {
   return betterAuth(authOptions(dependencies));
 }
 

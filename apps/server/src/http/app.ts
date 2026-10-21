@@ -4,12 +4,14 @@ import type pg from "pg";
 import { Hono } from "hono";
 
 import { AUTH_BASE_PATH } from "../auth/auth.ts";
+import { TELEGRAM_SIGN_IN_PATH } from "../auth/telegram-login.ts";
 
 /**
  * Маршруты better-auth, открытые снаружи. Остальные его маршруты – около 30, и новые версии
  * добавляют ещё – отвечают `404`: `disabledPaths` сравнивает путь точно и не закрыл бы новые.
  */
 const AUTH_ROUTES = [
+  { method: "POST", path: TELEGRAM_SIGN_IN_PATH },
   { method: "GET", path: "/get-session" },
   { method: "POST", path: "/sign-out" },
 ] as const;
