@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import process from "node:process";
 import pg from "pg";
 
-import { migrate, readMigrations } from "../database/migrate.ts";
+import { migrate } from "../database/migrate.ts";
+import { readMigrations } from "../database/migration-files.ts";
 import { createPool } from "../database/pool.ts";
 
 /**

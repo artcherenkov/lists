@@ -84,7 +84,7 @@ describe("миграции", () => {
     const unnumbered = { name: "fix_auth.sql", sql: "CREATE TABLE fix (id int)" };
 
     await expect(migrate(pool, [first, unnumbered])).rejects.toThrow(
-      "Имя миграции не по образцу 0001_что.sql: fix_auth.sql",
+      "Имя миграции не по образцу 0002_telegram_login.sql – номер, затем строчная латиница, цифры и _: fix_auth.sql",
     );
     expect(await tables()).toEqual([]);
   });

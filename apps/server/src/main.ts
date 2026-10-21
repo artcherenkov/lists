@@ -3,7 +3,8 @@ import process from "node:process";
 
 import { checkAuthSchema, createAuth } from "./auth/auth.ts";
 import { readConfig } from "./config.ts";
-import { migrate, readMigrations } from "./database/migrate.ts";
+import { migrate } from "./database/migrate.ts";
+import { readMigrations } from "./database/migration-files.ts";
 import { createPool } from "./database/pool.ts";
 import { createApp } from "./http/app.ts";
 

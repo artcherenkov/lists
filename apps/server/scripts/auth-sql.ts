@@ -5,20 +5,27 @@ import preparePostgres from "../src/__tests__/prepare-postgres.ts";
 import { TEST_AUTH_CONFIG } from "../src/__tests__/test-config.ts";
 import { createTestDatabase } from "../src/__tests__/test-database.ts";
 import { authOptions } from "../src/auth/auth.ts";
-import { writeMigration } from "../src/database/migrate.ts";
+import { checkNewMigrationName, writeMigration } from "../src/database/migration-files.ts";
 
 /**
  * Кладёт в миграции новым файлом SQL, которого базе после наших миграций не хватает до таблиц,
  * ожидаемых better-auth; `pnpm test:db` затем проверит, что файл только добавляет. Нужен после
  * обновления better-auth и правки полей плагина входа. Запуск – с именем нового файла:
- * `pnpm --filter server auth:sql 0002_что.sql`.
+ * `pnpm --filter server auth:sql 0002_telegram_login.sql`.
  *
  * Сравнивает на временной базе тестов: в базе разработки бывают таблицы из чужих веток. Если
  * добавлять нечего или расхождение добавлением не исправить, файла не создаёт.
  */
 const name = process.argv[2];
 if (!name) {
-  console.error("Нужно имя нового файла миграции: pnpm --filter server auth:sql 0002_что.sql");
+  console.error("Нужно имя нового файла: pnpm --filter server auth:sql 0002_telegram_login.sql");
+  process.exit(1);
+}
+// Имя проверяется до подъёма базы и расчёта: ошибка в нём видна сразу.
+try {
+  await checkNewMigrationName(name);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 }
 

@@ -2,7 +2,13 @@ import { defineConfig } from "vitest/config";
 
 // Где лежат тесты. Пути от корня, а не `**`: в основной копии `**` нашёл бы и тесты чужих
 // worktree в `.claude/worktrees`.
-const TEST_ROOTS = ["apps/*/src", "apps/*/build", "packages/*/src", "tests/fixtures"];
+const TEST_ROOTS = [
+  "apps/*/src",
+  "apps/*/build",
+  "apps/*/scripts",
+  "packages/*/src",
+  "tests/fixtures",
+];
 
 // unit – без сети и базы, их гоняет и хук pre-push; db – тесты на настоящем Postgres.
 export default defineConfig({

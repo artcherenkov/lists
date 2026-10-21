@@ -63,7 +63,7 @@ devbox:
 - `pnpm storybook` – Storybook на `http://localhost:6006`.
 - `pnpm check` – все проверки: `fmt:check`, `lint` (oxlint и `shellcheck` по `deploy/*.sh` и `deploy/ingress/*.sh`), `check-types`, сборка Storybook, unit, db и e2e. Перед слиянием запускай с `TURBO_FORCE=true`. Хук `.husky/pre-push` гоняет быстрые: `fmt:check`, `lint`, `check-types` и unit, без сборки Storybook и e2e.
 - `pnpm test:unit` – Vitest без базы. `pnpm test:db` – тесты сервера на Postgres, поднимает его сам. `pnpm test:e2e` – сборка приложения и Playwright на ней.
-- `pnpm --filter server auth:sql 0002_что.sql` – после обновления better-auth или правки полей плагина входа кладёт в `apps/server/src/migrations` новым файлом SQL, которого после наших миграций не хватает таблицам better-auth.
+- `pnpm --filter server auth:sql 0002_telegram_login.sql` – после обновления better-auth или правки полей плагина входа кладёт в `apps/server/src/migrations` новым файлом SQL, которого после наших миграций не хватает таблицам better-auth.
 - `pnpm deploy:v2 [коммит]` – выкладка коммита (по умолчанию `HEAD`) на `https://v2.watchlist.acherenkov.com`. На `lists` выкладываем только ею. `pnpm rollback:v2` – откат на прежний релиз, повторный откат отменяет первый. Устройство сервера, проверки и защиты выкладки, блокировка, прерывание, журнал выкладки, удаление старых релизов и ручные действия на сервере – в [deploy/README.md](deploy/README.md).
 - `pnpm fmt` – форматирование oxfmt. Из него исключены сгенерированное (`packages/ui/src/components/ui/**`, `pnpm-lock.yaml`) и документы, которые ведутся вручную: `docs/plan.md`, `docs/tasks/**`, `.claude/**`.
 - Компоненты shadcn, пресет и Storybook – в [docs/ui.md](docs/ui.md): прочитай перед работой с интерфейсом.
