@@ -33,9 +33,9 @@ const MIGRATION_LOCK = 6_000_001;
  *
  * Файл не начинает и не завершает транзакцию: он выполняется через `EXECUTE` в plpgsql, и `BEGIN`,
  * `COMMIT`, `ROLLBACK` или `END` в нём Postgres отклоняет сам. Состояние сеанса следующим файлам
- * файл не оставляет: `SET` параметров вроде `search_path` после него снимает `RESET ALL`, а роль,
- * режим транзакции (`SET TRANSACTION`) и временные таблицы `RESET ALL` не снимает – их в миграциях
- * не используем.
+ * файл не оставляет: `SET` параметров вроде `search_path` после него снимает `RESET ALL`. Остальное
+ * состояние сеанса – роль, `SET TRANSACTION`, `SET CONSTRAINTS`, временные таблицы и подобное –
+ * `RESET ALL` не снимает, его в миграциях не используем.
  *
  * Применённый файл не меняют и не удаляют, в том числе через `git revert`, даже комментарий:
  * сверка идёт по сумме всего файла. Ошибку исправляет новый файл.
@@ -75,10 +75,12 @@ export async function migrate(pool: pg.Pool, migrations: Migration[]): Promise<M
       // `COMMIT` или `ROLLBACK` в файле завершили бы общую транзакцию и сняли блокировку: следующие
       // файлы шли бы без них, а упавший файл оставил бы базу наполовину. В `EXECUTE` их в любом
       // написании не принимает сам Postgres. Параметров `DO` не принимает, поэтому текст файла
-      // приходит в него через настройку, которая живёт до конца транзакции.
-      await client.query("SELECT set_config('lists.migration', $1, true)", [file.sql]);
+      // приходит в него через настройку `lists.migration`.
       try {
-        await client.query("DO $$ BEGIN EXECUTE current_setting('lists.migration'); END $$");
+        await client.query("SELECT pg_catalog.set_config('lists.migration', $1, true)", [file.sql]);
+        await client.query(
+          "DO $$ BEGIN EXECUTE pg_catalog.current_setting('lists.migration'); END $$",
+        );
       } catch (error) {
         // pg бросает только Error.
         const { message } = error as Error;

@@ -113,6 +113,17 @@ describe("миграции", () => {
     ]);
   });
 
+  test("уборка временных объектов в файле не мешает следующим файлам", async () => {
+    const cleanup = { name: "0002_cleanup.sql", sql: "CREATE TABLE kept (id int); DISCARD TEMP" };
+    const third = { name: "0003_third.sql", sql: "CREATE TABLE third (id int)" };
+
+    expect((await migrate(pool, [first, cleanup, third])).applied).toEqual([
+      "0001_first.sql",
+      "0002_cleanup.sql",
+      "0003_third.sql",
+    ]);
+  });
+
   test("отказывает в файле без номера в имени, ничего не применяя", async () => {
     const unnumbered = { name: "fix_auth.sql", sql: "CREATE TABLE fix (id int)" };
 
