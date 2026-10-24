@@ -12,7 +12,8 @@ export const BOT_USERNAME = "lists_e2e_bot";
 const BOT_TOKEN = "e2e-token";
 
 const SERVER_MAIN = fileURLToPath(new URL("../../apps/server/src/main.ts", import.meta.url));
-// Запуск и остановка вместе укладываются в таймаут фикстуры `server` в `index.ts`.
+// Запуск и остановка вместе укладываются в таймаут фикстуры `server` в `index.ts`. Последняя
+// проверка здоровья может начаться перед самым сроком, поэтому запуск длится до 35 с.
 const START_TIMEOUT_MS = 30_000;
 // Проверка здоровья отвечает за миллисекунды; без ответа дольше – новая попытка.
 const HEALTH_TIMEOUT_MS = 5_000;
@@ -79,15 +80,23 @@ export async function startApiServer({
     });
   });
 
-  // Каждый шаг остановки идёт, даже если прежний упал: ошибки не заслоняют друг друга.
+  // База удаляется, даже если сервер пришлось убить; не удалилась – её уберёт следующий прогон
+  // (`dropAbandonedTestDatabases`). Playwright показывает у ошибки текст, стек и `cause`, поэтому
+  // обе причины – в тексте.
   const stop = async () => {
     serving = false;
-    const errors: unknown[] = [];
-    await stopProcess(server, closed).catch((error: unknown) => errors.push(error));
-    await telegram.close().catch((error: unknown) => errors.push(error));
-    await database.drop().catch((error: unknown) => errors.push(error));
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) throw new AggregateError(errors, "Сервер e2e остановился с ошибками");
+    let stopError: unknown;
+    await stopProcess(server, closed).catch((error: unknown) => (stopError = error));
+    await telegram.close();
+    try {
+      await database.drop();
+    } catch (dropError) {
+      if (stopError === undefined) throw dropError;
+      throw new Error(`${String(stopError)}\nБаза не удалилась: ${String(dropError)}`, {
+        cause: stopError,
+      });
+    }
+    if (stopError !== undefined) throw stopError;
   };
 
   try {

@@ -63,7 +63,7 @@ test("код из бота впускает, вход переживает пе�
   });
 });
 
-test("неверный код – объяснение на экране, новый код, вставленный в поле с ним, впускает", async ({
+test("неверный код – объяснение и пустое поле, новый код набирают сразу", async ({
   page,
   server,
   telegramUser,
@@ -73,11 +73,51 @@ test("неверный код – объяснение на экране, нов
 
   await codeField(page).fill("00000000");
   await expect(page.getByRole("alert")).toHaveText(
-    "Код неверный или устарел. Проверьте цифры или получите новый код у бота.",
+    "Код неверный или устарел. Наберите его снова или получите новый у бота.",
   );
+  await expect(codeField(page)).toHaveValue("");
+
+  await codeField(page).pressSequentially(code);
+  await expect(profileButton(page)).toBeVisible();
+});
+
+test("код из буфера, вставленный в поле с набранными цифрами, впускает", async ({
+  page,
+  server,
+  telegramUser,
+}) => {
+  await page.goto("/");
+  await codeField(page).pressSequentially("1234");
+
+  await pasteInto(codeField(page), await codeFromBot(server.api, telegramUser));
+  await expect(profileButton(page)).toBeVisible();
+});
+
+test("вставка во время проверки кода не отправляет его ещё раз", async ({
+  page,
+  server,
+  telegramUser,
+}) => {
+  await page.goto("/");
+  const code = await codeFromBot(server.api, telegramUser);
+  let signInRequests = 0;
+  let answer = () => {};
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  await page.route("**/api/auth/sign-in/telegram-code", async (route) => {
+    signInRequests += 1;
+    await answered;
+    await route.continue();
+  });
 
   await pasteInto(codeField(page), code);
+  await expect(page.getByRole("button", { name: "Проверяем код" })).toBeVisible();
+  await pasteInto(codeField(page), code);
+  answer();
+
   await expect(profileButton(page)).toBeVisible();
+  expect(signInRequests).toBe(1);
 });
 
 test("выход в профиле возвращает экран входа, и перезапуск его не отменяет", async ({
@@ -168,10 +208,11 @@ test.describe("без связи", () => {
       "Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.",
     );
 
-    await test.step("связь вернулась: имя бота приходит по событию online", async () => {
-      // Часы стоят, поэтому повтор по таймеру не сработает: ссылку может вернуть только событие.
+    await test.step("связь вернулась: ссылку возвращает повтор запроса через 5 с", async () => {
       await clock.freeze();
       await context.setOffline(false);
+      await expect(page.getByRole("button", { name: "Открыть бота в Telegram" })).toBeDisabled();
+      await clock.advance(5000);
       await expect(botLink(page)).toBeVisible();
     });
 

@@ -1,5 +1,6 @@
 import { writeJournal } from "../journal/journal.ts";
 import { browserStorage } from "../storage/storage.ts";
+import { watchBotUsername } from "./bot-username.ts";
 import { fetchBotUsername } from "./server-api.ts";
 import { ACCOUNT_KEY, createSessionStore } from "./store.ts";
 
@@ -31,5 +32,18 @@ export function startSession() {
   });
 }
 
-/** Имя бота входа без `@`; `null` – сервер недоступен. */
-export const loadBotUsername = () => fetchBotUsername(globalThis.fetch.bind(globalThis));
+// Пока сервер не назвал бота, имя запрашивается снова: сервер мог перезапускаться, а сеть
+// устройства – пропадать.
+const BOT_RETRY_MS = 5000;
+
+/** Следит за именем бота входа (без `@`), пока не получит его; возвращает остановку. */
+export function watchLoginBot(handlers: {
+  onName: (username: string) => void;
+  onUnavailable: () => void;
+}): () => void {
+  return watchBotUsername({
+    load: () => fetchBotUsername(globalThis.fetch.bind(globalThis)),
+    retryMs: BOT_RETRY_MS,
+    ...handlers,
+  });
+}

@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 
 import { type LoginBot, LoginScreen } from "./screens/login-screen.tsx";
-import { CODE_LENGTH, codeFromField, codeInText } from "./session/code-input.ts";
-import { loadBotUsername, signIn, type SignInResult } from "./session/session.ts";
-// Пока сервер не назвал бота, имя запрашивается снова: сервер мог перезапускаться, а событие
-// `online` приходит, только когда пропадала сама сеть устройства.
-const BOT_RETRY_MS = 5000;
+import { CODE_LENGTH, type CodeEntry, pastedCode, typedCode } from "./session/code-input.ts";
+import { signIn, type SignInResult, watchLoginBot } from "./session/session.ts";
 
 function problemText(result: Exclude<SignInResult, { kind: "signed-in" }>) {
   switch (result.kind) {
     case "wrong-code":
-      return "Код неверный или устарел. Проверьте цифры или получите новый код у бота.";
+      return "Код неверный или устарел. Наберите его снова или получите новый у бота.";
     case "too-often":
       return result.retryAfterSeconds === null
         ? "Слишком много попыток. Попробуйте позже."
@@ -22,40 +19,18 @@ function problemText(result: Exclude<SignInResult, { kind: "signed-in" }>) {
   }
 }
 
-/**
- * Бот входа: имя называет сервер, ссылка – `start=login` (решение 2 вехи 6). Пока имени нет, оно
- * запрашивается раз в несколько секунд и сразу, когда вернулась сеть.
- */
+/** Бот входа: имя называет сервер, ссылка – `start=login` (решение 2 вехи 6). */
 function useLoginBot(): LoginBot {
   const [bot, setBot] = useState<LoginBot>("loading");
-
-  useEffect(() => {
-    let stopped = false;
-    let loaded = false;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-    const load = async () => {
-      if (loaded) return;
-      const username = await loadBotUsername();
-      if (stopped || loaded) return;
-      if (username) {
-        loaded = true;
-        setBot({ name: `@${username}`, link: `https://t.me/${username}?start=login` });
-        return;
-      }
-      setBot("unavailable");
-      // Повтор по таймеру – один, даже если запросы по событию `online` шли параллельно.
-      clearTimeout(retry);
-      retry = setTimeout(load, BOT_RETRY_MS);
-    };
-    void load();
-    window.addEventListener("online", load);
-    return () => {
-      stopped = true;
-      clearTimeout(retry);
-      window.removeEventListener("online", load);
-    };
-  }, []);
-
+  useEffect(
+    () =>
+      watchLoginBot({
+        onName: (username) =>
+          setBot({ name: `@${username}`, link: `https://t.me/${username}?start=login` }),
+        onUnavailable: () => setBot("unavailable"),
+      }),
+    [],
+  );
   return bot;
 }
 
@@ -72,7 +47,17 @@ export function ConnectedLoginScreen({ onUpdate }: { onUpdate: (() => void) | un
     const result = await signIn(digits);
     if (result.kind === "signed-in") return;
     setChecking(false);
+    // Неверный код поле стирает: новый набирают сразу, не стирая прежний по цифре.
+    
     setProblem(problemText(result));
+  };
+
+  const enter = (entry: CodeEntry | undefined) => {
+    if (entry === undefined) return false;
+    setCode(entry.code);
+    setProblem(undefined);
+    if (entry.submit) void submit(entry.code);
+    return true;
   };
 
   return (
@@ -82,22 +67,8 @@ export function ConnectedLoginScreen({ onUpdate }: { onUpdate: (() => void) | un
       codeLength={CODE_LENGTH}
       checking={checking}
       problem={problem}
-      onCodeChange={(value) => {
-        const digits = codeFromField(value);
-        if (digits === undefined || digits === code) return;
-        setCode(digits);
-        setProblem(undefined);
-        if (digits.length === CODE_LENGTH) void submit(digits);
-      }}
-      onCodePaste={(text) => {
-        const pasted = codeInText(text);
-        if (pasted === undefined) return false;
-        // Вставка заменяет поле целиком и всегда отправляет код: и тот же, что был, – например,
-        // когда вернулась связь.
-        setCode(pasted);
-        void submit(pasted);
-        return true;
-      }}
+      onCodeChange={(value) => void enter(typedCode(value, code))}
+      onCodePaste={(text) => enter(pastedCode(text))}
       onSubmit={() => void submit(code)}
       onUpdate={onUpdate}
     />

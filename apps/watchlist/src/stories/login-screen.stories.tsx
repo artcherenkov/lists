@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 
 import { type LoginBot, LoginScreen } from "../screens/login-screen.tsx";
-import { CODE_LENGTH, codeFromField, codeInText } from "../session/code-input.ts";
+import { CODE_LENGTH, type CodeEntry, pastedCode, typedCode } from "../session/code-input.ts";
 
 const BOT: LoginBot = { name: "@lists_v2_bot", link: "https://t.me/lists_v2_bot?start=login" };
 
@@ -18,6 +18,10 @@ interface DemoArgs {
 /** Поле кода работает: можно набрать и вставить код, проверка не идёт. */
 function LoginScreenDemo({ bot, code: initialCode, checking, problem, onUpdate }: DemoArgs) {
   const [code, setCode] = useState(initialCode);
+  const enter = (entry: CodeEntry | undefined) => {
+    if (entry !== undefined) setCode(entry.code);
+    return entry !== undefined;
+  };
   return (
     <LoginScreen
       bot={bot}
@@ -25,12 +29,8 @@ function LoginScreenDemo({ bot, code: initialCode, checking, problem, onUpdate }
       codeLength={CODE_LENGTH}
       checking={checking}
       problem={problem}
-      onCodeChange={(value) => setCode((current) => codeFromField(value) ?? current)}
-      onCodePaste={(text) => {
-        const pasted = codeInText(text);
-        if (pasted !== undefined) setCode(pasted);
-        return pasted !== undefined;
-      }}
+      onCodeChange={(value) => void enter(typedCode(value, code))}
+      onCodePaste={(text) => enter(pastedCode(text))}
       onSubmit={() => {}}
       onUpdate={onUpdate}
     />
@@ -62,10 +62,7 @@ export const Checking: Story = {
 };
 
 export const WrongCode: Story = {
-  args: {
-    code: "12345679",
-    problem: "Код неверный или устарел. Проверьте цифры или получите новый код у бота.",
-  },
+  args: { problem: "Код неверный или устарел. Наберите его снова или получите новый у бота." },
 };
 
 export const TooOften: Story = {
