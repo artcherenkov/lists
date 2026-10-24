@@ -48,7 +48,7 @@ export function ConnectedLoginScreen({ onUpdate }: { onUpdate: (() => void) | un
     if (result.kind === "signed-in") return;
     setChecking(false);
     // Неверный код поле стирает: новый набирают сразу, не стирая прежний по цифре.
-    
+
     setProblem(problemText(result));
   };
 
